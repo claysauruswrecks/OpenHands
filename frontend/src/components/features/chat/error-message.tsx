@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { code } from "../markdown/code";
 import { ol, ul } from "../markdown/list";
 import { pre } from "../markdown/pre";
+import { useExpandCollapse } from "#/context/expand-collapse-context";
 import ArrowDown from "#/icons/angle-down-solid.svg?react";
 import ArrowUp from "#/icons/angle-up-solid.svg?react";
 import i18n from "#/i18n";
@@ -17,7 +18,18 @@ interface ErrorMessageProps {
 
 export function ErrorMessage({ errorId, defaultMessage }: ErrorMessageProps) {
   const { t } = useTranslation();
-  const [showDetails, setShowDetails] = React.useState(false);
+  const [showDetailsLocal, setShowDetailsLocal] = React.useState(false);
+  const { shouldShowDetails, setIndividualOverride } = useExpandCollapse();
+
+  // Generate unique component ID for this message
+  const componentId = React.useMemo(
+    () =>
+      `error-message-${errorId || "no-error-id"}-${defaultMessage?.slice(0, 50).replace(/[^a-zA-Z0-9]/g, "") || "no-message"}`,
+    [errorId, defaultMessage],
+  );
+
+  // Get the actual showDetails value from context
+  const showDetails = shouldShowDetails(showDetailsLocal, componentId);
 
   const hasValidTranslationId = !!errorId && i18n.exists(errorId);
   const errorKey = hasValidTranslationId
@@ -44,7 +56,10 @@ export function ErrorMessage({ errorId, defaultMessage }: ErrorMessageProps) {
           {/* Expand/collapse button */}
           <button
             type="button"
-            onClick={() => setShowDetails((prev) => !prev)}
+            onClick={() => {
+              setIndividualOverride(componentId);
+              setShowDetailsLocal((prev) => !prev);
+            }}
             className="cursor-pointer p-1"
             aria-label={showDetails ? "Collapse" : "Expand"}
           >

@@ -22,7 +22,14 @@ import { ActionSuggestions } from "./action-suggestions";
 import { ScrollProvider } from "#/context/scroll-context";
 
 import { ScrollToBottomButton } from "#/components/shared/buttons/scroll-to-bottom-button";
+import { ScrollToTopButton } from "#/components/shared/buttons/scroll-to-top-button";
+import { ExpandAllButton } from "#/components/shared/buttons/expand-all-button";
+import { CollapseAllButton } from "#/components/shared/buttons/collapse-all-button";
 import { LoadingSpinner } from "#/components/shared/loading-spinner";
+import {
+  ExpandCollapseProvider,
+  useExpandCollapse,
+} from "#/context/expand-collapse-context";
 import { useGetTrajectory } from "#/hooks/mutation/use-get-trajectory";
 import { downloadTrajectory } from "#/utils/download-trajectory";
 import { displayErrorToast } from "#/utils/custom-toast-handlers";
@@ -43,8 +50,9 @@ function getEntryPoint(
   return "direct";
 }
 
-export function ChatInterface() {
+function ChatInterfaceContent() {
   const { getErrorMessage } = useWSErrorMessage();
+  const { setExpandAll, setCollapseAll } = useExpandCollapse();
   const { send, isLoadingMessages, parsedEvents } = useWsClient();
   const { setOptimisticUserMessage, getOptimisticUserMessage } =
     useOptimisticUserMessage();
@@ -58,6 +66,33 @@ export function ChatInterface() {
     setAutoScroll,
     setHitBottom,
   } = useScrollToBottom(scrollRef);
+
+  // Scroll to top functionality
+  const scrollDomToTop = React.useCallback(() => {
+    const dom = scrollRef.current;
+    if (dom) {
+      requestAnimationFrame(() => {
+        // Set state first to disable auto-scroll
+        setAutoScroll(false);
+        setHitBottom(false);
+
+        // Use instant scrolling to avoid timing issues with auto-scroll
+        dom.scrollTo({
+          top: 0,
+          behavior: "instant",
+        });
+      });
+    }
+  }, [setHitBottom, setAutoScroll]);
+
+  // Expand/Collapse all functionality
+  const expandAllMessages = React.useCallback(() => {
+    setExpandAll();
+  }, [setExpandAll]);
+
+  const collapseAllMessages = React.useCallback(() => {
+    setCollapseAll();
+  }, [setCollapseAll]);
   const { data: config } = useConfig();
 
   const { curAgentState } = useSelector((state: RootState) => state.agent);
@@ -204,7 +239,7 @@ export function ChatInterface() {
         <div
           ref={scrollRef}
           onScroll={(e) => onChatBodyScroll(e.currentTarget)}
-          className="scrollbar scrollbar-thin scrollbar-thumb-gray-400 scrollbar-thumb-rounded-full scrollbar-track-gray-800 hover:scrollbar-thumb-gray-300 flex flex-col grow overflow-y-auto overflow-x-hidden px-4 pt-4 gap-2 fast-smooth-scroll"
+          className="scrollbar scrollbar-thin scrollbar-thumb-gray-400 scrollbar-thumb-rounded-full scrollbar-track-gray-800 hover:scrollbar-thumb-gray-300 flex flex-col grow overflow-y-auto overflow-x-hidden px-2 pt-4 gap-2 fast-smooth-scroll"
         >
           {isLoadingMessages && (
             <div className="flex justify-center">
@@ -230,25 +265,32 @@ export function ChatInterface() {
             )}
         </div>
 
-        <div className="flex flex-col gap-[6px] px-4 pb-4">
+        <div className="flex flex-col gap-[6px] px-2 pb-4">
           <div className="flex justify-between relative">
-            {config?.APP_MODE !== "saas" && (
-              <TrajectoryActions
-                onPositiveFeedback={() =>
-                  onClickShareFeedbackActionButton("positive")
-                }
-                onNegativeFeedback={() =>
-                  onClickShareFeedbackActionButton("negative")
-                }
-                onExportTrajectory={() => onClickExportTrajectoryButton()}
-              />
-            )}
+            <div className="flex gap-1">
+              {config?.APP_MODE !== "saas" && (
+                <TrajectoryActions
+                  onPositiveFeedback={() =>
+                    onClickShareFeedbackActionButton("positive")
+                  }
+                  onNegativeFeedback={() =>
+                    onClickShareFeedbackActionButton("negative")
+                  }
+                  onExportTrajectory={() => onClickExportTrajectoryButton()}
+                />
+              )}
+              <ExpandAllButton onClick={expandAllMessages} />
+              <CollapseAllButton onClick={collapseAllMessages} />
+            </div>
 
             <div className="absolute left-1/2 transform -translate-x-1/2 bottom-0">
               {curAgentState === AgentState.RUNNING && <TypingIndicator />}
             </div>
 
-            {!hitBottom && <ScrollToBottomButton onClick={scrollDomToBottom} />}
+            <div className="flex gap-1">
+              <ScrollToTopButton onClick={scrollDomToTop} />
+              <ScrollToBottomButton onClick={scrollDomToBottom} />
+            </div>
           </div>
 
           {errorMessage && <ErrorMessageBanner message={errorMessage} />}
@@ -275,5 +317,13 @@ export function ChatInterface() {
         )}
       </div>
     </ScrollProvider>
+  );
+}
+
+export function ChatInterface() {
+  return (
+    <ExpandCollapseProvider>
+      <ChatInterfaceContent />
+    </ExpandCollapseProvider>
   );
 }

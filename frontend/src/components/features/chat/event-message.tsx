@@ -119,6 +119,7 @@ export function EventMessage({
           <ChatMessage
             type="agent"
             message={event.args.thought}
+            timestamp={event.timestamp}
             actions={actions}
           />
           {microagentStatus && actions && (
@@ -146,6 +147,7 @@ export function EventMessage({
         <ChatMessage
           type="agent"
           message={getEventContent(event).details}
+          timestamp={event.timestamp}
           actions={actions}
         />
         {microagentStatus && actions && (
@@ -165,7 +167,12 @@ export function EventMessage({
 
     return (
       <>
-        <ChatMessage type={event.source} message={message} actions={actions}>
+        <ChatMessage
+          type={event.source}
+          message={message}
+          timestamp={event.timestamp}
+          actions={actions}
+        >
           {event.args.image_urls && event.args.image_urls.length > 0 && (
             <ImageCarousel size="small" images={event.args.image_urls} />
           )}
@@ -191,7 +198,11 @@ export function EventMessage({
   if (isRejectObservation(event)) {
     return (
       <div>
-        <ChatMessage type="agent" message={event.content} />
+        <ChatMessage
+          type="agent"
+          message={event.content}
+          timestamp={event.timestamp}
+        />
       </div>
     );
   }
@@ -204,6 +215,7 @@ export function EventMessage({
           details={<MCPObservationContent event={event} />}
           success={getObservationResult(event)}
           event={event}
+          timestamp={event.timestamp}
         />
         {shouldShowConfirmationButtons && <ConfirmationButtons />}
       </div>
@@ -213,7 +225,11 @@ export function EventMessage({
   return (
     <div>
       {isOpenHandsAction(event) && hasThoughtProperty(event.args) && (
-        <ChatMessage type="agent" message={event.args.thought} />
+        <ChatMessage
+          type="agent"
+          message={event.args.thought}
+          timestamp={event.timestamp}
+        />
       )}
 
       <GenericEventMessage
@@ -225,6 +241,7 @@ export function EventMessage({
             : undefined
         }
         event={event}
+        timestamp={event.timestamp}
       />
 
       {shouldShowConfirmationButtons && <ConfirmationButtons />}

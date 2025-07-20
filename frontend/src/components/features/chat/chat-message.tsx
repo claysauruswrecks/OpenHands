@@ -13,10 +13,12 @@ import { paragraph } from "../markdown/paragraph";
 import ArrowDown from "#/icons/angle-down-solid.svg?react";
 import ArrowUp from "#/icons/angle-up-solid.svg?react";
 import { useSettings } from "#/hooks/query/use-settings";
+import { useExpandCollapse } from "#/context/expand-collapse-context";
 
 interface ChatMessageProps {
   type: OpenHandsSourceType;
   message: string;
+  timestamp?: string;
   actions?: Array<{
     icon: React.ReactNode;
     onClick: () => void;
@@ -26,13 +28,25 @@ interface ChatMessageProps {
 export function ChatMessage({
   type,
   message,
+  timestamp,
   children,
   actions,
 }: React.PropsWithChildren<ChatMessageProps>) {
   const [isHovering, setIsHovering] = React.useState(false);
   const [isCopy, setIsCopy] = React.useState(false);
-  const [showDetails, setShowDetails] = React.useState(true);
+  const [showDetailsLocal, setShowDetailsLocal] = React.useState(true);
   const { data: settings } = useSettings();
+  const { shouldShowDetails, setIndividualOverride } = useExpandCollapse();
+
+  // Generate unique component ID for this message
+  const componentId = React.useMemo(
+    () =>
+      `chat-message-${type}-${message.slice(0, 50).replace(/[^a-zA-Z0-9]/g, "")}-${timestamp || "no-timestamp"}`,
+    [type, message, timestamp],
+  );
+
+  // Get the actual showDetails value from context
+  const showDetails = shouldShowDetails(showDetailsLocal, componentId);
 
   const handleCopyToClipboard = async () => {
     await navigator.clipboard.writeText(message);
@@ -62,6 +76,23 @@ export function ChatMessage({
     return modelName.includes("/")
       ? modelName.split("/").pop() || modelName
       : modelName;
+  };
+
+  // Format timestamp for display
+  const formatTimestamp = (timestamp: string) => {
+    try {
+      const date = new Date(timestamp);
+      return date.toLocaleString(undefined, {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      });
+    } catch {
+      return timestamp;
+    }
   };
 
   // For user messages, use the existing simple styling
@@ -128,7 +159,7 @@ export function ChatMessage({
       data-testid={`${type}-message`}
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}
-      className="rounded-xl relative w-fit mt-6 max-w-full bg-transparent flex flex-col gap-2"
+      className="rounded-xl relative w-full mt-6 max-w-full bg-transparent flex flex-col gap-2"
     >
       <div
         className={cn(
@@ -157,25 +188,30 @@ export function ChatMessage({
         />
       </div>
 
-      <div className="flex flex-col gap-2 border-l-2 pl-2 my-2 py-2 border-neutral-300 text-sm w-full overflow-hidden">
-        <div className="flex items-center justify-between font-bold text-neutral-300">
-          <div className="flex-1 min-w-0 mr-4">
-            {modelName && (
+      <div className="flex flex-col gap-2 border-l-2 pl-1 my-2 py-2 border-neutral-300 text-sm w-full overflow-hidden">
+        <div className="flex flex-col gap-1 font-bold text-neutral-300">
+          {/* Top row: From label (centered) - no status details for agent messages */}
+          {modelName && (
+            <div className="flex items-center justify-center">
               <div
-                className="text-neutral-400 font-normal"
-                style={{ fontSize: "8pt" }}
+                className="text-neutral-400 font-normal text-xs"
+                style={{ fontSize: "9pt", lineHeight: "1rem" }}
               >
                 From: <span className="font-mono">{modelName}</span>
               </div>
-            )}
-            <div className="truncate">Agent Message</div>
-          </div>
+            </div>
+          )}
 
-          <div className="flex items-center gap-2 flex-shrink-0">
+          {/* Second row: Agent Message title (centered) and chevron (right) */}
+          <div className="flex items-center justify-center relative">
+            <div className="font-bold text-neutral-300">Agent Message</div>
             <button
               type="button"
-              onClick={() => setShowDetails((prev) => !prev)}
-              className="cursor-pointer p-1"
+              onClick={() => {
+                setIndividualOverride(componentId);
+                setShowDetailsLocal((prev) => !prev);
+              }}
+              className="absolute right-1 cursor-pointer p-1"
               aria-label={showDetails ? "Collapse" : "Expand"}
             >
               {showDetails ? (
@@ -185,6 +221,18 @@ export function ChatMessage({
               )}
             </button>
           </div>
+
+          {/* Third row: Timestamp (centered) - for agent messages */}
+          {timestamp && type === "agent" && (
+            <div className="flex items-center justify-center">
+              <div
+                className="text-neutral-400 font-normal text-xs"
+                style={{ fontSize: "9pt", lineHeight: "1rem" }}
+              >
+                {formatTimestamp(timestamp)}
+              </div>
+            </div>
+          )}
         </div>
 
         {showDetails && (
