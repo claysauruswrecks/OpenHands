@@ -1,65 +1,110 @@
 import React from "react";
-import { ExtraProps } from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
+import { ExtraProps } from "react-markdown";
+import { MinifiableCode } from "./minifiable-code";
 
-// See https://github.com/remarkjs/react-markdown?tab=readme-ov-file#use-custom-components-syntax-highlight
+interface CodeProps extends ExtraProps {
+  inline?: boolean;
+  className?: string;
+  children?: React.ReactNode;
+}
 
-/**
- * Component to render code blocks in markdown.
- */
-export function code({
-  children,
-  className,
-}: React.ClassAttributes<HTMLElement> &
-  React.HTMLAttributes<HTMLElement> &
-  ExtraProps) {
-  const match = /language-(\w+)/.exec(className || ""); // get the language
+// Check if content looks like cat -n output
+const isCatNOutput = (content: string): boolean => {
+  const lines = content.split("\n");
+  if (lines.length < 2) return false;
 
-  if (!match) {
-    const isMultiline = String(children).includes("\n");
+  // Check if first line mentions cat -n or if lines start with line numbers
+  const firstLine = lines[0];
+  if (firstLine.includes("cat -n") || firstLine.includes("result of running")) {
+    return true;
+  }
 
-    if (!isMultiline) {
+  // Check if at least the first few content lines match cat -n pattern
+  const catNPattern = /^\s*\d+\t/;
+  let matchCount = 0;
+  for (let i = 0; i < Math.min(5, lines.length); i++) {
+    if (catNPattern.test(lines[i])) {
+      matchCount++;
+    }
+  }
+
+  return matchCount >= 2; // At least 2 lines should match the pattern
+};
+
+export function code({ inline, className, children, ...props }: CodeProps) {
+  const match = /language-(\w+)/.exec(className || "");
+  const lang = match ? match[1] : undefined;
+
+  const codeString = String(children).replace(/\n$/, "");
+  const lines = codeString.split("\n");
+
+  // Explicitly check if this should be treated as inline code
+  // Inline code is either explicitly marked as inline OR is single-line without a language
+  const isInlineCode =
+    inline === true || (lines.length === 1 && !lang && codeString.length < 100);
+
+  // For non-inline code blocks, decide whether to use MinifiableCode
+  if (!isInlineCode) {
+    // Use MinifiableCode for:
+    // 1. cat -n output (regardless of size)
+    // 2. Code blocks with 10 or more lines (to match lineThreshold)
+    // 3. Code blocks without a language (to ensure consistency)
+    if (isCatNOutput(codeString) || lines.length >= 10 || !lang) {
       return (
-        <code
-          className={className}
-          style={{
-            backgroundColor: "#2a3038",
-            padding: "0.2em 0.4em",
-            borderRadius: "4px",
-            color: "#e6edf3",
-            border: "1px solid #30363d",
-          }}
+        <MinifiableCode
+          language={lang}
+          className="rounded-lg"
+          minifiedByDefault={true}
+          lineThreshold={10}
         >
-          {children}
-        </code>
+          {codeString}
+        </MinifiableCode>
       );
     }
 
-    return (
-      <pre
-        style={{
-          backgroundColor: "#2a3038",
-          padding: "1em",
-          borderRadius: "4px",
-          color: "#e6edf3",
-          border: "1px solid #30363d",
-          overflow: "auto",
-        }}
-      >
-        <code className={className}>{String(children).replace(/\n$/, "")}</code>
-      </pre>
-    );
+    // For smaller code blocks with a language, use SyntaxHighlighter directly
+    if (lang) {
+      return (
+        <div style={{ position: "relative", marginTop: "0.5rem" }}>
+          <SyntaxHighlighter
+            language={lang}
+            style={vscDarkPlus}
+            customStyle={{
+              margin: 0,
+              fontSize: "13px",
+              borderRadius: "0.375rem",
+              padding: "1rem",
+            }}
+            codeTagProps={{
+              style: {
+                fontSize: "inherit",
+                fontFamily: "inherit",
+              },
+            }}
+          >
+            {codeString}
+          </SyntaxHighlighter>
+        </div>
+      );
+    }
   }
 
+  // Inline code
   return (
-    <SyntaxHighlighter
-      className="rounded-lg"
-      style={vscDarkPlus}
-      language={match?.[1]}
-      PreTag="div"
+    <code
+      className={className}
+      style={{
+        padding: "0.125rem 0.25rem",
+        borderRadius: "0.25rem",
+        backgroundColor: "#1e1e1e",
+        fontSize: "14px",
+        fontWeight: "bold",
+      }}
+      {...props}
     >
-      {String(children).replace(/\n$/, "")}
-    </SyntaxHighlighter>
+      {children}
+    </code>
   );
 }

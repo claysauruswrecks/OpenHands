@@ -6,6 +6,7 @@ import { BaseModalTitle } from "#/components/shared/modals/confirmation-modals/b
 import { ModalBackdrop } from "#/components/shared/modals/modal-backdrop";
 import { ModalBody } from "#/components/shared/modals/modal-body";
 import { I18nKey } from "#/i18n/declaration";
+import { MinifiablePre } from "../markdown/minifiable-pre";
 import { useConversationMicroagents } from "#/hooks/query/use-conversation-microagents";
 import { RootState } from "#/store";
 import { AgentState } from "#/types/agent-state";
@@ -162,10 +163,13 @@ export function MicroagentsModal({ onClose }: MicroagentsModalProps) {
                               {t(I18nKey.MICROAGENTS_MODAL$CONTENT)}
                             </h4>
                             <div className="text-sm mt-2 p-3 bg-gray-900 rounded-md overflow-auto text-gray-300 max-h-[400px] shadow-inner">
-                              <pre className="whitespace-pre-wrap font-mono text-sm leading-relaxed">
+                              <MinifiablePre
+                                className="whitespace-pre-wrap font-mono text-sm leading-relaxed"
+                                style={{ margin: 0, background: "transparent" }}
+                              >
                                 {agent.content ||
                                   t(I18nKey.MICROAGENTS_MODAL$NO_CONTENT)}
-                              </pre>
+                              </MinifiablePre>
                             </div>
                           </div>
                         </div>

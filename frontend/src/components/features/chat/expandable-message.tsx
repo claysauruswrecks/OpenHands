@@ -17,6 +17,7 @@ import { cn } from "#/utils/utils";
 import { code } from "../markdown/code";
 import { ol, ul } from "../markdown/list";
 import { paragraph } from "../markdown/paragraph";
+import { pre } from "../markdown/pre";
 import { MonoComponent } from "./mono-component";
 import { PathComponent } from "./path-component";
 
@@ -94,7 +95,7 @@ export function ExpandableMessage({
         action: processedAction,
       });
       setDetails(message);
-      setShowDetails(false);
+      setShowDetails(true);
     }
   }, [id, message, observation, action, i18n.language]);
 
@@ -128,15 +129,16 @@ export function ExpandableMessage({
   return (
     <div
       className={cn(
-        "flex gap-2 items-center justify-start border-l-2 pl-2 my-2 py-2",
+        "flex gap-2 items-center justify-start border-l-2 pl-2 my-2 py-2 overflow-hidden",
         type === "error" ? "border-danger" : "border-neutral-300",
       )}
     >
-      <div className="text-sm w-full">
+      <div className="text-sm w-full overflow-hidden">
         <div className="flex flex-row justify-between items-center w-full">
+          {/* Title with verb and command/filename - expands to fill space */}
           <span
             className={cn(
-              "font-bold",
+              "font-bold truncate flex-1 min-w-0 mr-4",
               type === "error" ? "text-danger" : "text-neutral-300",
             )}
           >
@@ -153,52 +155,68 @@ export function ExpandableMessage({
             ) : (
               message
             )}
+          </span>
+
+          {/* Status details, icon and expand/collapse button grouped at the end */}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {/* Show truncated details preview if available */}
+            {details && !showDetails && (
+              <span className="text-xs text-neutral-400">
+                {typeof details === "string"
+                  ? details.slice(0, 50).replace(/\n/g, " ").trim()
+                  : "Details available"}
+              </span>
+            )}
+
+            {type === "action" && success !== undefined && (
+              <>
+                {success ? (
+                  <CheckCircle
+                    data-testid="status-icon"
+                    className={cn(statusIconClasses, "fill-success")}
+                  />
+                ) : (
+                  <XCircle
+                    data-testid="status-icon"
+                    className={cn(statusIconClasses, "fill-danger")}
+                  />
+                )}
+              </>
+            )}
+
             <button
               type="button"
               onClick={() => setShowDetails(!showDetails)}
-              className="cursor-pointer text-left"
+              className="cursor-pointer p-1"
+              aria-label={showDetails ? "Collapse" : "Expand"}
             >
               {showDetails ? (
                 <ArrowUp
                   className={cn(
-                    "h-4 w-4 ml-2 inline",
+                    "h-4 w-4",
                     type === "error" ? "fill-danger" : "fill-neutral-300",
                   )}
                 />
               ) : (
                 <ArrowDown
                   className={cn(
-                    "h-4 w-4 ml-2 inline",
+                    "h-4 w-4",
                     type === "error" ? "fill-danger" : "fill-neutral-300",
                   )}
                 />
               )}
             </button>
-          </span>
-          {type === "action" && success !== undefined && (
-            <span className="flex-shrink-0">
-              {success ? (
-                <CheckCircle
-                  data-testid="status-icon"
-                  className={cn(statusIconClasses, "fill-success")}
-                />
-              ) : (
-                <XCircle
-                  data-testid="status-icon"
-                  className={cn(statusIconClasses, "fill-danger")}
-                />
-              )}
-            </span>
-          )}
+          </div>
         </div>
         {showDetails && (
-          <div className="text-sm">
+          <div className="text-sm overflow-x-auto">
             <Markdown
               components={{
                 code,
                 ul,
                 ol,
                 p: paragraph,
+                pre,
               }}
               remarkPlugins={[remarkGfm, remarkBreaks]}
             >

@@ -3,6 +3,7 @@ import ReactJsonView from "@microlink/react-json-view";
 import { useTranslation } from "react-i18next";
 import { MCPObservation } from "#/types/core/observations";
 import { JSON_VIEW_THEME } from "#/utils/constants";
+import { MinifiablePre } from "../markdown/minifiable-pre";
 
 interface MCPObservationContentProps {
   event: MCPObservation;
@@ -62,9 +63,13 @@ export function MCPObservationContent({ event }: MCPObservationContentProps) {
               displayDataTypes={false}
             />
           ) : (
-            <pre className="whitespace-pre-wrap">
+            <MinifiablePre
+              className="whitespace-pre-wrap"
+              style={{ margin: 0, background: "transparent" }}
+              showLineNumbers={true}
+            >
               {event.content.trim() || t("OBSERVATION$MCP_NO_OUTPUT")}
-            </pre>
+            </MinifiablePre>
           )}
         </div>
       </div>

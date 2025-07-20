@@ -10,15 +10,7 @@ export function handleObservationMessage(message: ObservationMessage) {
   switch (message.observation) {
     case ObservationType.RUN: {
       if (message.extras.hidden) break;
-      let { content } = message;
-
-      if (content.length > 5000) {
-        const halfLength = 2500;
-        const head = content.slice(0, halfLength);
-        const tail = content.slice(content.length - halfLength);
-        content = `${head}\r\n\n... (truncated ${message.content.length - 5000} characters) ...\r\n\n${tail}`;
-      }
-
+      const { content } = message;
       store.dispatch(appendOutput(content));
       break;
     }

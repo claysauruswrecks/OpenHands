@@ -7,6 +7,7 @@ import { ModalBackdrop } from "#/components/shared/modals/modal-backdrop";
 import { ModalBody } from "#/components/shared/modals/modal-body";
 import { cn } from "#/utils/utils";
 import { JSON_VIEW_THEME } from "#/utils/constants";
+import { MinifiablePre } from "../markdown/minifiable-pre";
 
 interface SystemMessageModalProps {
   isOpen: boolean;
@@ -120,9 +121,12 @@ export function SystemMessageModal({
 
             <div className="max-h-[51vh] overflow-auto rounded-md">
               {activeTab === "system" && (
-                <div className="p-4 whitespace-pre-wrap font-mono text-sm leading-relaxed text-gray-300 shadow-inner">
+                <MinifiablePre
+                  className="p-4 whitespace-pre-wrap font-mono text-sm leading-relaxed text-gray-300 shadow-inner"
+                  style={{ background: "transparent", border: "none" }}
+                >
                   {systemMessage.content}
-                </div>
+                </MinifiablePre>
               )}
 
               {activeTab === "tools" &&

@@ -37,9 +37,7 @@ export const getEventContent = (
           i18nKey={actionKey}
           values={{
             path: hasPathProperty(event.args) && event.args.path,
-            command:
-              hasCommandProperty(event.args) &&
-              trimText(event.args.command, 80),
+            command: hasCommandProperty(event.args) && event.args.command, // No trimming
             mcp_tool_name: event.action === "call_tool_mcp" && event.args.name,
           }}
           components={{
@@ -65,9 +63,7 @@ export const getEventContent = (
           i18nKey={observationKey}
           values={{
             path: hasPathProperty(event.extras) && event.extras.path,
-            command:
-              hasCommandProperty(event.extras) &&
-              trimText(event.extras.command, 80),
+            command: hasCommandProperty(event.extras) && event.extras.command, // No trimming
             mcp_tool_name: event.observation === "mcp" && event.extras.name,
           }}
           components={{

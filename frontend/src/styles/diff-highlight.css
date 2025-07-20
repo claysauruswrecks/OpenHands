@@ -1,0 +1,65 @@
+/* PrismJS Diff syntax highlighting - GitHub-like colors */
+
+/* Deleted lines - background only */
+.token.deleted {
+  background-color: rgba(248, 81, 73, 0.15);
+  text-decoration: none;
+  display: inline-block;
+  width: 100%;
+}
+
+/* Inserted lines - background only */
+.token.inserted {
+  background-color: rgba(46, 160, 67, 0.15);
+  text-decoration: none;
+  display: inline-block;
+  width: 100%;
+}
+
+/* Diff prefix signs (+ and -) should be colored */
+.token.deleted-sign.prefix {
+  color: #f85149;
+}
+
+.token.inserted-sign.prefix {
+  color: #3fb950;
+}
+
+/* Diff metadata (file paths, line numbers) */
+.token.coord {
+  color: #58a6ff;
+  font-weight: bold;
+}
+
+.token.diff {
+  color: #8b949e;
+}
+
+.token.punctuation.diff {
+  color: #8b949e;
+}
+
+/* Make the line backgrounds extend full width */
+pre[class*="language-diff"] .token.deleted,
+pre[class*="language-diff"] .token.inserted {
+  display: block;
+  margin: 0 -1em;
+  padding: 0 1em;
+}
+
+/* For lines that contain both deletion/insertion and code */
+pre[class*="language-diff"] .token.deleted-sign.line,
+pre[class*="language-diff"] .token.inserted-sign.line {
+  background-color: transparent;
+  color: inherit;
+}
+
+/* Ensure proper line height */
+pre[class*="language-diff"] {
+  line-height: 1.5;
+}
+
+/* Style for unchanged lines in diff */
+pre[class*="language-diff"] .token.unchanged {
+  color: #e6edf3;
+}

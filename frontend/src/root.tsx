@@ -8,6 +8,7 @@ import {
 } from "react-router";
 import "./tailwind.css";
 import "./index.css";
+import "./styles/diff-highlight.css";
 import React from "react";
 import { Toaster } from "react-hot-toast";
 

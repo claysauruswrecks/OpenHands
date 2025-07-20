@@ -203,6 +203,7 @@ export function EventMessage({
           title={getEventContent(event).title}
           details={<MCPObservationContent event={event} />}
           success={getObservationResult(event)}
+          event={event}
         />
         {shouldShowConfirmationButtons && <ConfirmationButtons />}
       </div>
@@ -223,6 +224,7 @@ export function EventMessage({
             ? getObservationResult(event)
             : undefined
         }
+        event={event}
       />
 
       {shouldShowConfirmationButtons && <ConfirmationButtons />}
