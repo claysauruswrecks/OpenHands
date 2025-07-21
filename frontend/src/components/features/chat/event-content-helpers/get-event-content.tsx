@@ -16,11 +16,6 @@ const hasCommandProperty = (
   obj: Record<string, unknown>,
 ): obj is { command: string } => typeof obj.command === "string";
 
-const trimText = (text: string, maxLength: number): string => {
-  if (!text) return "";
-  return text.length > maxLength ? `${text.substring(0, maxLength)}...` : text;
-};
-
 export const getEventContent = (
   event: OpenHandsAction | OpenHandsObservation,
 ) => {

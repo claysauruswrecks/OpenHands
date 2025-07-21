@@ -66,7 +66,7 @@ export function MCPObservationContent({ event }: MCPObservationContentProps) {
             <MinifiablePre
               className="whitespace-pre-wrap"
               style={{ margin: 0, background: "transparent" }}
-              showLineNumbers={true}
+              showLineNumbers
             >
               {event.content.trim() || t("OBSERVATION$MCP_NO_OUTPUT")}
             </MinifiablePre>

@@ -2,6 +2,7 @@ import React from "react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
+import { useTranslation } from "react-i18next";
 import { code } from "../markdown/code";
 import { ol, ul } from "../markdown/list";
 import { pre } from "../markdown/pre";
@@ -14,7 +15,6 @@ import { isOpenHandsObservation, isOpenHandsAction } from "#/types/core/guards";
 import { CommandDisplay } from "./command-display";
 import { DiffWithSyntax } from "./diff-with-syntax";
 import { OpenHandsAction } from "#/types/core/actions";
-import { useSettings } from "#/hooks/query/use-settings";
 import { useExpandCollapse } from "#/context/expand-collapse-context";
 
 interface GenericEventMessageProps {
@@ -31,7 +31,6 @@ const extractLineCountInfo = (
 ): { shown: number; total: number; percentage: number } | null => {
   // Try to count actual lines in the content
   const lines = content.split("\n");
-  let actualLines = lines.length;
 
   // If content has truncation markers, try to estimate total lines
   if (content.includes("[... Observation truncated due to length ...]")) {
@@ -125,7 +124,7 @@ const countFileLines = (content: string): number => {
   // Filter out empty lines at the end (common in file reads)
   let endIndex = lines.length - 1;
   while (endIndex >= 0 && lines[endIndex].trim() === "") {
-    endIndex--;
+    endIndex -= 1;
   }
 
   return Math.max(1, endIndex + 1);
@@ -173,13 +172,13 @@ const extractDiffStats = (
       !line.startsWith("+++") &&
       !line.startsWith("@@")
     ) {
-      additions++;
+      additions += 1;
     } else if (
       line.startsWith("-") &&
       !line.startsWith("---") &&
       !line.startsWith("@@")
     ) {
-      deletions++;
+      deletions += 1;
     }
   }
 
@@ -214,6 +213,7 @@ function getDetailsPreview(
   details: string | React.ReactNode,
   success?: ObservationResultStatus,
   event?: OpenHandsObservation | OpenHandsAction,
+  t?: (key: string) => string,
 ): string | React.ReactNode {
   // First, try to extract specific metadata from the event
   if (event && isOpenHandsObservation(event)) {
@@ -228,23 +228,22 @@ function getDetailsPreview(
       if (exitCode === -1) {
         return (
           <span>
-            timeout (
+            {t ? t("command.timeout") : "timeout"} (
             <code>
               $?=<span className="text-danger">-1</span>
             </code>
             )
           </span>
         );
-      } else {
-        return (
-          <code>
-            $?=
-            <span className={exitCode === 0 ? "text-success" : "text-danger"}>
-              {String(exitCode)}
-            </span>
-          </code>
-        );
       }
+      return (
+        <code>
+          $?=
+          <span className={exitCode === 0 ? "text-success" : "text-danger"}>
+            {String(exitCode)}
+          </span>
+        </code>
+      );
     }
 
     // For error observations, show the error message
@@ -257,7 +256,8 @@ function getDetailsPreview(
       if (event.extras?.recall_type === "workspace_context") {
         // Just show a simple indicator for workspace context
         return "";
-      } else if (
+      }
+      if (
         event.extras?.microagent_knowledge &&
         event.extras.microagent_knowledge.length > 0
       ) {
@@ -291,55 +291,49 @@ function getDetailsPreview(
             // New file: "New +25"
             return (
               <span>
-                New <span className="text-success">+{additions}</span>
+                {t ? t("file.new") : "New"}{" "}
+                <span className="text-success">+{additions}</span>
               </span>
             );
-          } else if (isDeletedFile) {
+          }
+          if (isDeletedFile) {
             // Deleted file: "Deleted -300"
             return (
               <span>
-                Deleted <span className="text-danger">-{deletions}</span>
-              </span>
-            );
-          } else if (additions > 0 && deletions > 0) {
-            // Modified file: "Edited +25,-60"
-            return (
-              <span>
-                Edited <span className="text-success">+{additions}</span>,
+                {t ? t("file.deleted") : "Deleted"}{" "}
                 <span className="text-danger">-{deletions}</span>
               </span>
             );
-          } else if (additions > 0) {
+          }
+          if (additions > 0 && deletions > 0) {
+            // Modified file: "Edited +25,-60"
+            return (
+              <span>
+                {t ? t("file.edited") : "Edited"}{" "}
+                <span className="text-success">+{additions}</span>,
+                <span className="text-danger">-{deletions}</span>
+              </span>
+            );
+          }
+          if (additions > 0) {
             // Only additions: "Edited +15"
             return (
               <span>
-                Edited <span className="text-success">+{additions}</span>
+                {t ? t("file.edited") : "Edited"}{" "}
+                <span className="text-success">+{additions}</span>
               </span>
             );
-          } else if (deletions > 0) {
+          }
+          if (deletions > 0) {
             // Only deletions: "Edited -8"
             return (
               <span>
-                Edited <span className="text-danger">-{deletions}</span>
+                {t ? t("file.edited") : "Edited"}{" "}
+                <span className="text-danger">-{deletions}</span>
               </span>
             );
-          } else {
-            return "No changes";
           }
-        } else {
-          // Fall back to existing logic if we can't extract diff stats
-          if (event.content?.includes("created")) {
-            return "File created";
-          } else if (event.content?.includes("changes")) {
-            const changesMatch = event.content.match(/(\d+)\s+changes?/);
-            if (changesMatch) {
-              return `${changesMatch[1]} change${changesMatch[1] === "1" ? "" : "s"}`;
-            } else {
-              return "File edited";
-            }
-          } else {
-            return "File edited";
-          }
+          return "No changes";
         }
       }
     }
@@ -351,23 +345,21 @@ function getDetailsPreview(
         const lineCount = countFileLines(event.content || "");
         if (lineCount > 0) {
           return `${lineCount}/${lineCount} lines (100%)`;
-        } else {
-          return "Empty file";
         }
-      } else if (success === "partial") {
+        return "Empty file";
+      }
+      if (success === "partial") {
         // For partial reads, show line count and percentage
         const lineInfo = extractLineCountInfo(event.content || "");
         if (lineInfo) {
           return `${lineInfo.shown}/${lineInfo.total} lines (${lineInfo.percentage}%)`;
-        } else {
-          // Fallback if we can't extract line info
-          const linesMatch = event.content?.match(/(\d+)\s+lines?/);
-          if (linesMatch) {
-            return `~${linesMatch[1]} lines (partial)`;
-          } else {
-            return "Partial file read";
-          }
         }
+        // Fallback if we can't extract line info
+        const linesMatch = event.content?.match(/(\d+)\s+lines?/);
+        if (linesMatch) {
+          return `~${linesMatch[1]} lines (partial)`;
+        }
+        return "Partial file read";
       }
     }
 
@@ -383,10 +375,9 @@ function getDetailsPreview(
             ))}
           </>
         );
-      } else {
-        // All strings, join normally
-        return parts.join(" | ");
       }
+      // All strings, join normally
+      return parts.join(" | ");
     }
   }
 
@@ -410,8 +401,8 @@ export function GenericEventMessage({
   event,
   timestamp,
 }: GenericEventMessageProps) {
+  const { t } = useTranslation();
   const [showDetailsLocal, setShowDetailsLocal] = React.useState(false);
-  const { data: settings } = useSettings();
   const { shouldShowDetails, setIndividualOverride } = useExpandCollapse();
 
   // Generate unique component ID for this message
@@ -425,9 +416,9 @@ export function GenericEventMessage({
   const showDetails = shouldShowDetails(showDetailsLocal, componentId);
 
   // Format timestamp for display
-  const formatTimestamp = (timestamp: string) => {
+  const formatTimestamp = (timestampValue: string) => {
     try {
-      const date = new Date(timestamp);
+      const date = new Date(timestampValue);
       return date.toLocaleString(undefined, {
         year: "numeric",
         month: "short",
@@ -437,12 +428,12 @@ export function GenericEventMessage({
         second: "2-digit",
       });
     } catch {
-      return timestamp;
+      return timestampValue;
     }
   };
 
   // Extract preview from details
-  const detailsPreview = getDetailsPreview(details, success, event);
+  const detailsPreview = getDetailsPreview(details, success, event, t);
 
   // Determine "from" label based on source
   let fromLabel: string | null = null;
@@ -476,7 +467,7 @@ export function GenericEventMessage({
                 className="text-neutral-400 font-normal text-xs pr-4"
                 style={{ fontSize: "9pt", lineHeight: "1rem" }}
               >
-                From:{" "}
+                {t("chat.from")}:{" "}
                 {showSystemLabel ? (
                   fromLabel
                 ) : (
@@ -484,7 +475,7 @@ export function GenericEventMessage({
                 )}
               </div>
             ) : (
-              <div></div>
+              <div />
             )}
             {detailsPreview && (
               <div
@@ -553,50 +544,64 @@ export function GenericEventMessage({
       {showDetails && (
         <div className="overflow-x-auto">
           {/* Show command display for run observations */}
-          {event &&
-          isOpenHandsObservation(event) &&
-          event.observation === "run" &&
-          event.extras?.command ? (
-            <>
-              <CommandDisplay command={event.extras.command as string} />
-              {/* Show output if available */}
-              {event.content && (
-                <div className="mt-2">
-                  <Markdown
-                    components={{
-                      code,
-                      ul,
-                      ol,
-                      pre,
-                    }}
-                    remarkPlugins={[remarkGfm, remarkBreaks]}
-                  >
-                    {`\`\`\`sh\n${event.content.trim() || "[Command finished execution with no output]"}\n\`\`\``}
-                  </Markdown>
-                </div>
-              )}
-            </>
-          ) : event &&
-            isOpenHandsObservation(event) &&
-            event.observation === "edit" &&
-            event.extras?.diff ? (
-            // Special handling for edit observations with diffs
-            <DiffWithSyntax diff={event.extras.diff} />
-          ) : typeof details === "string" ? (
-            <Markdown
-              components={{
-                code,
-                ul,
-                ol,
-                pre,
-              }}
-              remarkPlugins={[remarkGfm, remarkBreaks]}
-            >
-              {details}
-            </Markdown>
-          ) : (
-            details
-          )}
+          {(() => {
+            if (
+              event &&
+              isOpenHandsObservation(event) &&
+              event.observation === "run" &&
+              event.extras?.command
+            ) {
+              return (
+                <>
+                  <CommandDisplay command={event.extras.command as string} />
+                  {/* Show output if available */}
+                  {event.content && (
+                    <div className="mt-2">
+                      <Markdown
+                        components={{
+                          code,
+                          ul,
+                          ol,
+                          pre,
+                        }}
+                        remarkPlugins={[remarkGfm, remarkBreaks]}
+                      >
+                        {`\`\`\`sh\n${event.content.trim() || "[Command finished execution with no output]"}\n\`\`\``}
+                      </Markdown>
+                    </div>
+                  )}
+                </>
+              );
+            }
+
+            if (
+              event &&
+              isOpenHandsObservation(event) &&
+              event.observation === "edit" &&
+              event.extras?.diff
+            ) {
+              // Special handling for edit observations with diffs
+              return <DiffWithSyntax diff={event.extras.diff} />;
+            }
+
+            if (typeof details === "string") {
+              return (
+                <Markdown
+                  components={{
+                    code,
+                    ul,
+                    ol,
+                    pre,
+                  }}
+                  remarkPlugins={[remarkGfm, remarkBreaks]}
+                >
+                  {details}
+                </Markdown>
+              );
+            }
+
+            return details;
+          })()}
         </div>
       )}
     </div>

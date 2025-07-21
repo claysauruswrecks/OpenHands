@@ -10,8 +10,6 @@ export type ObservationResultStatus =
  * Check if content contains actual error indicators, not just informational messages
  */
 const isActualError = (content: string): boolean => {
-  const lowerContent = content.toLowerCase();
-
   // Don't treat these informational messages as errors
   const informationalPatterns = [
     /\[edit error: the range of lines to edit is too long\.\]/i,

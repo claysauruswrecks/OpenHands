@@ -64,16 +64,25 @@ export function ExpandCollapseProvider({
     [expandAllState, individualOverrides],
   );
 
+  const contextValue = React.useMemo(
+    () => ({
+      expandAllState,
+      setExpandAll,
+      setCollapseAll,
+      setIndividualOverride,
+      shouldShowDetails,
+    }),
+    [
+      expandAllState,
+      setExpandAll,
+      setCollapseAll,
+      setIndividualOverride,
+      shouldShowDetails,
+    ],
+  );
+
   return (
-    <ExpandCollapseContext.Provider
-      value={{
-        expandAllState,
-        setExpandAll,
-        setCollapseAll,
-        setIndividualOverride,
-        shouldShowDetails,
-      }}
-    >
+    <ExpandCollapseContext.Provider value={contextValue}>
       {children}
     </ExpandCollapseContext.Provider>
   );

@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { cn } from "#/utils/utils";
 import ArrowDown from "#/icons/angle-down-solid.svg?react";
 import ArrowUp from "#/icons/angle-up-solid.svg?react";
@@ -20,6 +21,7 @@ export function MinifiablePre({
   lineThreshold = 10,
   showLineNumbers = false,
 }: MinifiablePreProps) {
+  const { t } = useTranslation();
   const [isMinified, setIsMinified] = React.useState(minifiedByDefault);
 
   // Clean up cat -n output if detected
@@ -29,7 +31,7 @@ export function MinifiablePre({
   // Check if this looks like cat -n output (lines starting with spaces and numbers)
   const isCatNOutput =
     lines.length > 1 &&
-    lines.every((line, idx) => {
+    lines.every((line) => {
       if (line.trim() === "") return true; // Empty lines are ok
       // Check if line starts with optional spaces followed by a number
       return /^\s*\d+\s/.test(line);
@@ -58,44 +60,6 @@ export function MinifiablePre({
   const processedLines = processedContent.split("\n");
   const needsMinification = processedLines.length > lineThreshold;
 
-  const getMiniView = () => {
-    if (!needsMinification) return processedContent;
-
-    const beginning = processedLines.slice(0, 2);
-    const middleIndex = Math.floor(processedLines.length / 2);
-    const middle = processedLines.slice(middleIndex - 1, middleIndex + 1);
-    const end = processedLines.slice(-2);
-
-    if (showLineNumbers) {
-      return renderWithLineNumbers(
-        [
-          ...beginning,
-          "... " + (middleIndex - 2) + " lines omitted ...",
-          ...middle,
-          "... " +
-            (processedLines.length - middleIndex - 1 - 2) +
-            " lines omitted ...",
-          ...end,
-        ],
-        true,
-      );
-    }
-
-    return (
-      <>
-        <div>{beginning.join("\n")}</div>
-        <div className="text-neutral-500 my-1">
-          ... {middleIndex - 2} lines omitted ...
-        </div>
-        <div>{middle.join("\n")}</div>
-        <div className="text-neutral-500 my-1">
-          ... {processedLines.length - middleIndex - 1 - 2} lines omitted ...
-        </div>
-        <div>{end.join("\n")}</div>
-      </>
-    );
-  };
-
   const renderWithLineNumbers = (
     content: string | string[],
     isMini: boolean = false,
@@ -114,7 +78,9 @@ export function MinifiablePre({
             if (isMini && line.startsWith("...")) {
               return <div key={idx}>&nbsp;</div>;
             }
-            return <div key={idx}>{lineNum++}</div>;
+            const currentLineNum = lineNum;
+            lineNum += 1;
+            return <div key={idx}>{currentLineNum}</div>;
           })}
         </div>
         <div className="flex-1 min-w-0 overflow-x-auto">
@@ -131,6 +97,42 @@ export function MinifiablePre({
           ))}
         </div>
       </div>
+    );
+  };
+
+  const getMiniView = () => {
+    if (!needsMinification) return processedContent;
+
+    const beginning = processedLines.slice(0, 2);
+    const middleIndex = Math.floor(processedLines.length / 2);
+    const middle = processedLines.slice(middleIndex - 1, middleIndex + 1);
+    const end = processedLines.slice(-2);
+
+    if (showLineNumbers) {
+      return renderWithLineNumbers(
+        [
+          ...beginning,
+          `... ${middleIndex - 2} lines omitted ...`,
+          ...middle,
+          `... ${processedLines.length - middleIndex - 1 - 2} lines omitted ...`,
+          ...end,
+        ],
+        true,
+      );
+    }
+
+    return (
+      <>
+        <div>{beginning.join("\n")}</div>
+        <div className="text-neutral-500 my-1">
+          ... {middleIndex - 2} lines omitted ...
+        </div>
+        <div>{middle.join("\n")}</div>
+        <div className="text-neutral-500 my-1">
+          ... {processedLines.length - middleIndex - 1 - 2} lines omitted ...
+        </div>
+        <div>{end.join("\n")}</div>
+      </>
     );
   };
 
@@ -174,12 +176,16 @@ export function MinifiablePre({
         >
           {isMinified ? (
             <>
-              Show full output ({processedLines.length} lines)
+              {t("markdown.minifiablePre.showFullOutput", {
+                count: processedLines.length,
+              })}
               <ArrowDown className="h-3 w-3 fill-current" />
             </>
           ) : (
             <>
-              Collapse ({processedLines.length} lines)
+              {t("markdown.minifiablePre.collapse", {
+                count: processedLines.length,
+              })}
               <ArrowUp className="h-3 w-3 fill-current" />
             </>
           )}
@@ -197,11 +203,15 @@ export function MinifiablePre({
         }}
       >
         <code>
-          {isMinified
-            ? getMiniView()
-            : showLineNumbers
-              ? renderWithLineNumbers(processedContent)
-              : processedContent}
+          {(() => {
+            if (isMinified) {
+              return getMiniView();
+            }
+            if (showLineNumbers) {
+              return renderWithLineNumbers(processedContent);
+            }
+            return processedContent;
+          })()}
         </code>
       </pre>
       <button
@@ -211,12 +221,16 @@ export function MinifiablePre({
       >
         {isMinified ? (
           <>
-            Show full output ({processedLines.length} lines)
+            {t("markdown.minifiablePre.showFullOutput", {
+              count: processedLines.length,
+            })}
             <ArrowDown className="h-3 w-3 fill-current" />
           </>
         ) : (
           <>
-            Collapse ({processedLines.length} lines)
+            {t("markdown.minifiablePre.collapse", {
+              count: processedLines.length,
+            })}
             <ArrowUp className="h-3 w-3 fill-current" />
           </>
         )}

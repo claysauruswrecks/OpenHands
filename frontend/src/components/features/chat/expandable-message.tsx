@@ -69,13 +69,13 @@ const extractDiffStats = (
       !line.startsWith("+++") &&
       !line.startsWith("@@")
     ) {
-      additions++;
+      additions += 1;
     } else if (
       line.startsWith("-") &&
       !line.startsWith("---") &&
       !line.startsWith("@@")
     ) {
-      deletions++;
+      deletions += 1;
     }
   }
 
@@ -109,6 +109,7 @@ const extractDiffStats = (
 const getEditStatusText = (
   content: string,
   success?: boolean,
+  t?: (key: string) => string,
 ): string | React.ReactNode => {
   if (success === false && content?.toLowerCase().includes("error:")) {
     const errorMatch = content.match(/error:\s*([^\n]+)/i);
@@ -125,55 +126,62 @@ const getEditStatusText = (
         // New file: "New +25"
         return (
           <span>
-            New <span className="text-success">+{additions}</span>
+            {t ? t("file.new") : "New"}{" "}
+            <span className="text-success">+{additions}</span>
           </span>
         );
-      } else if (isDeletedFile) {
+      }
+      if (isDeletedFile) {
         // Deleted file: "Deleted -300"
         return (
           <span>
-            Deleted <span className="text-danger">-{deletions}</span>
-          </span>
-        );
-      } else if (additions > 0 && deletions > 0) {
-        // Modified file: "Edited +25,-60"
-        return (
-          <span>
-            Edited <span className="text-success">+{additions}</span>,
+            {t ? t("file.deleted") : "Deleted"}{" "}
             <span className="text-danger">-{deletions}</span>
           </span>
         );
-      } else if (additions > 0) {
+      }
+      if (additions > 0 && deletions > 0) {
+        // Modified file: "Edited +25,-60"
+        return (
+          <span>
+            {t ? t("file.edited") : "Edited"}{" "}
+            <span className="text-success">+{additions}</span>,
+            <span className="text-danger">-{deletions}</span>
+          </span>
+        );
+      }
+      if (additions > 0) {
         // Only additions: "Edited +15"
         return (
           <span>
-            Edited <span className="text-success">+{additions}</span>
+            {t ? t("file.edited") : "Edited"}{" "}
+            <span className="text-success">+{additions}</span>
           </span>
         );
-      } else if (deletions > 0) {
+      }
+      if (deletions > 0) {
         // Only deletions: "Edited -8"
         return (
           <span>
-            Edited <span className="text-danger">-{deletions}</span>
+            {t ? t("file.edited") : "Edited"}{" "}
+            <span className="text-danger">-{deletions}</span>
           </span>
         );
-      } else {
-        return "No changes";
       }
+      return "No changes";
     }
     // Fall back to existing logic if we can't extract diff stats
     if (content?.includes("created")) {
       return "File created";
-    } else if (content?.includes("changes")) {
+    }
+    if (content?.includes("changes")) {
       const changesMatch = content.match(/(\d+)\s+changes?/);
       if (changesMatch) {
         return `${changesMatch[1]} change${changesMatch[1] === "1" ? "" : "s"}`;
-      } else {
-        return "File edited";
       }
-    } else {
       return "File edited";
     }
+    return "File edited";
   }
   return "Details available";
 };
@@ -265,7 +273,7 @@ export function ExpandableMessage({
   // Compute status text for edit observations
   const statusText = useMemo(() => {
     if (observation && observation.payload.observation === "edit") {
-      return getEditStatusText(observation.payload.content, success);
+      return getEditStatusText(observation.payload.content, success, t);
     }
 
     // For other observations, show truncated details if available
@@ -341,21 +349,19 @@ export function ExpandableMessage({
               <span className="text-xs text-neutral-400">{statusText}</span>
             )}
 
-            {type === "action" && success !== undefined && (
-              <>
-                {success ? (
-                  <CheckCircle
-                    data-testid="status-icon"
-                    className={cn(statusIconClasses, "fill-success")}
-                  />
-                ) : (
-                  <XCircle
-                    data-testid="status-icon"
-                    className={cn(statusIconClasses, "fill-danger")}
-                  />
-                )}
-              </>
-            )}
+            {type === "action" &&
+              success !== undefined &&
+              (success ? (
+                <CheckCircle
+                  data-testid="status-icon"
+                  className={cn(statusIconClasses, "fill-success")}
+                />
+              ) : (
+                <XCircle
+                  data-testid="status-icon"
+                  className={cn(statusIconClasses, "fill-danger")}
+                />
+              ))}
 
             <button
               type="button"

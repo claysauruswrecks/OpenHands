@@ -2,6 +2,7 @@ import React from "react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
+import { useTranslation } from "react-i18next";
 import { code } from "../markdown/code";
 import { cn } from "#/utils/utils";
 import { ul, ol } from "../markdown/list";
@@ -32,6 +33,7 @@ export function ChatMessage({
   children,
   actions,
 }: React.PropsWithChildren<ChatMessageProps>) {
+  const { t } = useTranslation();
   const [isHovering, setIsHovering] = React.useState(false);
   const [isCopy, setIsCopy] = React.useState(false);
   const [showDetailsLocal, setShowDetailsLocal] = React.useState(true);
@@ -79,9 +81,9 @@ export function ChatMessage({
   };
 
   // Format timestamp for display
-  const formatTimestamp = (timestamp: string) => {
+  const formatTimestamp = (timestampValue: string) => {
     try {
-      const date = new Date(timestamp);
+      const date = new Date(timestampValue);
       return date.toLocaleString(undefined, {
         year: "numeric",
         month: "short",
@@ -91,7 +93,7 @@ export function ChatMessage({
         second: "2-digit",
       });
     } catch {
-      return timestamp;
+      return timestampValue;
     }
   };
 
@@ -197,14 +199,16 @@ export function ChatMessage({
                 className="text-neutral-400 font-normal text-xs"
                 style={{ fontSize: "9pt", lineHeight: "1rem" }}
               >
-                From: <span className="font-mono">{modelName}</span>
+                {t("chat.from")}: <span className="font-mono">{modelName}</span>
               </div>
             </div>
           )}
 
           {/* Second row: Agent Message title (centered) and chevron (right) */}
           <div className="flex items-center justify-center relative">
-            <div className="font-bold text-neutral-300">Agent Message</div>
+            <div className="font-bold text-neutral-300">
+              {t("chat.agentMessage")}
+            </div>
             <button
               type="button"
               onClick={() => {

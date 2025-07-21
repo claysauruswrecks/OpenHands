@@ -24,9 +24,9 @@ const isCatNOutput = (content: string): boolean => {
   // Check if at least the first few content lines match cat -n pattern
   const catNPattern = /^\s*\d+\t/;
   let matchCount = 0;
-  for (let i = 0; i < Math.min(5, lines.length); i++) {
+  for (let i = 0; i < Math.min(5, lines.length); i += 1) {
     if (catNPattern.test(lines[i])) {
-      matchCount++;
+      matchCount += 1;
     }
   }
 
@@ -56,7 +56,7 @@ export function code({ inline, className, children, ...props }: CodeProps) {
         <MinifiableCode
           language={lang}
           className="rounded-lg"
-          minifiedByDefault={true}
+          minifiedByDefault
           lineThreshold={10}
         >
           {codeString}
@@ -102,6 +102,7 @@ export function code({ inline, className, children, ...props }: CodeProps) {
         fontSize: "14px",
         fontWeight: "bold",
       }}
+      // eslint-disable-next-line react/jsx-props-no-spreading
       {...props}
     >
       {children}

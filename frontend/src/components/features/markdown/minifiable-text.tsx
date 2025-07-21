@@ -1,7 +1,14 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { cn } from "#/utils/utils";
 import ArrowDown from "#/icons/angle-down-solid.svg?react";
 import ArrowUp from "#/icons/angle-up-solid.svg?react";
+
+// Interface for React element props that might have children
+interface ElementWithChildren {
+  children?: React.ReactNode;
+  [key: string]: unknown;
+}
 
 interface MinifiableTextProps {
   children: React.ReactNode;
@@ -14,18 +21,40 @@ export function MinifiableText({
   children,
   className,
   minifiedByDefault = true,
-  lineThreshold = 10,
+  lineThreshold = 30,
 }: MinifiableTextProps) {
+  const { t } = useTranslation();
   const [isMinified, setIsMinified] = React.useState(minifiedByDefault);
   const [needsMinification, setNeedsMinification] = React.useState(false);
   const [miniView, setMiniView] = React.useState<React.ReactNode>(null);
+
+  // Helper function to extract text from React elements
+  function extractTextFromElement(element: React.ReactElement): string {
+    const props = element.props as ElementWithChildren;
+    if (typeof props.children === "string") {
+      return props.children;
+    }
+    if (Array.isArray(props.children)) {
+      return props.children
+        .map((child: React.ReactNode) => {
+          if (typeof child === "string") return child;
+          if (React.isValidElement(child)) return extractTextFromElement(child);
+          return "";
+        })
+        .join("");
+    }
+    return "";
+  }
 
   React.useEffect(() => {
     // Convert children to string to analyze lines
     const textContent = React.Children.toArray(children)
       .map((child) => {
         if (typeof child === "string") return child;
-        if (React.isValidElement(child) && child.props.children) {
+        if (
+          React.isValidElement(child) &&
+          (child.props as ElementWithChildren)?.children
+        ) {
           return extractTextFromElement(child);
         }
         return "";
@@ -59,25 +88,8 @@ export function MinifiableText({
     }
   }, [children, lineThreshold]);
 
-  // Helper function to extract text from React elements
-  function extractTextFromElement(element: React.ReactElement): string {
-    if (typeof element.props.children === "string") {
-      return element.props.children;
-    }
-    if (Array.isArray(element.props.children)) {
-      return element.props.children
-        .map((child: any) => {
-          if (typeof child === "string") return child;
-          if (React.isValidElement(child)) return extractTextFromElement(child);
-          return "";
-        })
-        .join("");
-    }
-    return "";
-  }
-
   if (!needsMinification) {
-    return <>{children}</>;
+    return children;
   }
 
   return (
@@ -88,7 +100,7 @@ export function MinifiableText({
           onClick={() => setIsMinified(true)}
           className="mb-2 text-xs text-neutral-400 hover:text-neutral-300 flex items-center gap-1"
         >
-          Show less
+          {t("showLess")}
           <ArrowUp className="h-3 w-3 fill-current" />
         </button>
       )}
@@ -106,12 +118,12 @@ export function MinifiableText({
       >
         {isMinified ? (
           <>
-            Show more
+            {t("showMore")}
             <ArrowDown className="h-3 w-3 fill-current" />
           </>
         ) : (
           <>
-            Show less
+            {t("showLess")}
             <ArrowUp className="h-3 w-3 fill-current" />
           </>
         )}

@@ -19,6 +19,7 @@ import {
   renderConversationCreatedToast,
   renderConversationFinishedToast,
 } from "#/components/features/chat/microagent/microagent-status-toast";
+import EventLogger from "#/utils/event-logger";
 
 interface ConversationSocket {
   socket: Socket;
@@ -226,16 +227,14 @@ export function ConversationSubscriptionsProvider({
         });
 
         socket.on("connect_error", (error) => {
-          console.warn(
-            `Socket for conversation ${conversationId} CONNECTION ERROR:`,
-            error,
+          EventLogger.warning(
+            `Socket for conversation ${conversationId} CONNECTION ERROR: ${error}`,
           );
         });
 
         socket.on("disconnect", (reason) => {
-          console.warn(
-            `Socket for conversation ${conversationId} DISCONNECTED! Reason:`,
-            reason,
+          EventLogger.warning(
+            `Socket for conversation ${conversationId} DISCONNECTED! Reason: ${reason}`,
           );
           setConversationSockets((prev) => {
             // Make sure the conversation still exists in our state

@@ -9,12 +9,10 @@ import {
   FaRegEdit,
 } from "react-icons/fa";
 import { BiTerminal } from "react-icons/bi"; // Terminal for run
-import { LuBrainCircuit } from "react-icons/lu"; // Neural network for think
-import { TbSatellite } from "react-icons/tb"; // Satellite for browse
+import { LuBrainCircuit, LuSend } from "react-icons/lu"; // Neural network for think, Send/paper plane for delegate
+import { TbSatellite, TbPuzzle } from "react-icons/tb"; // Satellite for browse, Puzzle piece for mcp
 import { GiCrystalBall } from "react-icons/gi"; // Crystal ball for run_ipython
-import { LuSend } from "react-icons/lu"; // Send/paper plane for delegate
 import { MdOutlineInventory2 } from "react-icons/md"; // Archive for recall
-import { TbPuzzle } from "react-icons/tb"; // Puzzle piece for mcp
 import { VscWorkspaceUnknown } from "react-icons/vsc"; // State flow for agent_state_changed
 import { ObservationResultStatus } from "./event-content-helpers/get-observation-result";
 

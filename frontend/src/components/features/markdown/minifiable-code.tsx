@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { cn } from "#/utils/utils";
@@ -86,7 +87,7 @@ const parseCatNOutput = (
       firstLine.includes("cat -n"))
   ) {
     // Try to extract file path for language detection
-    const pathMatch = firstLine.match(/(?:on|to)\s+([\/\w\-_.]+\.\w+)/);
+    const pathMatch = firstLine.match(/(?:on|to)\s+([/\w\-_.]+\.\w+)/);
     if (pathMatch) {
       detectedLanguage = getLanguageFromPath(pathMatch[1]);
     }
@@ -98,7 +99,7 @@ const parseCatNOutput = (
   let parsedLines: ParsedLine[] = [];
   let isCatN = false;
 
-  for (let i = startIndex; i < lines.length; i++) {
+  for (let i = startIndex; i < lines.length; i += 1) {
     const line = lines[i];
     const match = line.match(catNPattern);
 
@@ -139,6 +140,7 @@ export function MinifiableCode({
   minifiedByDefault = true,
   lineThreshold = 10,
 }: MinifiableCodeProps) {
+  const { t } = useTranslation();
   const [isMinified, setIsMinified] = React.useState(minifiedByDefault);
 
   // Parse the content to check for cat -n format
@@ -150,13 +152,6 @@ export function MinifiableCode({
 
   // Use detected language if not explicitly provided
   const effectiveLanguage = language || detectedLanguage;
-
-  // Determine button text based on language
-  const isCommandOutput =
-    effectiveLanguage === "sh" ||
-    effectiveLanguage === "bash" ||
-    effectiveLanguage === "shell";
-  const buttonText = isCommandOutput ? "output" : "code";
 
   // For cat -n output, we work with parsed lines
   const needsMinification = parsedLines.length > lineThreshold;
@@ -187,6 +182,7 @@ export function MinifiableCode({
 
   // Render content with custom line numbers for cat -n format
   if (isCatN) {
+    // eslint-disable-next-line arrow-body-style
     const renderCatNContent = () => {
       return (
         <div className="flex min-w-0">
@@ -290,12 +286,12 @@ export function MinifiableCode({
           >
             {isMinified ? (
               <>
-                Show full {buttonText} ({parsedLines.length} lines)
+                {t("show_full_code", { count: parsedLines.length })}
                 <ArrowDown className="h-3 w-3 fill-current" />
               </>
             ) : (
               <>
-                Collapse ({parsedLines.length} lines)
+                {t("collapse", { count: parsedLines.length })}
                 <ArrowUp className="h-3 w-3 fill-current" />
               </>
             )}
@@ -333,12 +329,12 @@ export function MinifiableCode({
           >
             {isMinified ? (
               <>
-                Show full {buttonText} ({parsedLines.length} lines)
+                {t("show_full_code", { count: parsedLines.length })}
                 <ArrowDown className="h-3 w-3 fill-current" />
               </>
             ) : (
               <>
-                Collapse ({parsedLines.length} lines)
+                {t("collapse", { count: parsedLines.length })}
                 <ArrowUp className="h-3 w-3 fill-current" />
               </>
             )}
@@ -395,12 +391,12 @@ export function MinifiableCode({
         >
           {isMinified ? (
             <>
-              Show full {buttonText} ({lines.length} lines)
+              {t("show_full_code", { count: lines.length })}
               <ArrowDown className="h-3 w-3 fill-current" />
             </>
           ) : (
             <>
-              Collapse ({lines.length} lines)
+              {t("collapse", { count: lines.length })}
               <ArrowUp className="h-3 w-3 fill-current" />
             </>
           )}
@@ -432,12 +428,12 @@ export function MinifiableCode({
       >
         {isMinified ? (
           <>
-            Show full {buttonText} ({lines.length} lines)
+            {t("show_full_code", { count: lines.length })}
             <ArrowDown className="h-3 w-3 fill-current" />
           </>
         ) : (
           <>
-            Collapse ({lines.length} lines)
+            {t("collapse", { count: lines.length })}
             <ArrowUp className="h-3 w-3 fill-current" />
           </>
         )}

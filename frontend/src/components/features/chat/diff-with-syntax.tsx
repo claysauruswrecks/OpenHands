@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 import ArrowDown from "#/icons/angle-down-solid.svg?react";
@@ -9,6 +10,7 @@ interface DiffWithSyntaxProps {
 }
 
 export function DiffWithSyntax({ diff }: DiffWithSyntaxProps) {
+  const { t } = useTranslation();
   const lines = diff.split("\n");
   const needsMinification = lines.length > 50;
   const [isMinified, setIsMinified] = React.useState(true);
@@ -105,7 +107,7 @@ export function DiffWithSyntax({ diff }: DiffWithSyntaxProps) {
     };
 
     // Apply background colors based on line type
-    let style = { ...baseStyle };
+    const style = { ...baseStyle };
     let className = "";
 
     if (lineType === "added") {
@@ -220,12 +222,12 @@ export function DiffWithSyntax({ diff }: DiffWithSyntaxProps) {
         >
           {isMinified ? (
             <>
-              Show full diff ({lines.length} lines)
+              {t("show_full_diff", { count: lines.length })}
               <ArrowDown className="h-3 w-3 fill-current" />
             </>
           ) : (
             <>
-              Collapse ({lines.length} lines)
+              {t("collapse", { count: lines.length })}
               <ArrowUp className="h-3 w-3 fill-current" />
             </>
           )}
@@ -265,12 +267,12 @@ export function DiffWithSyntax({ diff }: DiffWithSyntaxProps) {
         >
           {isMinified ? (
             <>
-              Show full diff ({lines.length} lines)
+              {t("show_full_diff", { count: lines.length })}
               <ArrowDown className="h-3 w-3 fill-current" />
             </>
           ) : (
             <>
-              Collapse ({lines.length} lines)
+              {t("collapse", { count: lines.length })}
               <ArrowUp className="h-3 w-3 fill-current" />
             </>
           )}
