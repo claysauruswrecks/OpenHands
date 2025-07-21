@@ -86,4 +86,9 @@ function PathComponent(props: { children?: ReactNode }) {
   return <strong className="font-mono">{children}</strong>;
 }
 
-export { PathComponent, isLikelyDirectory };
+export {
+  PathComponent,
+  isLikelyDirectory,
+  decodeHtmlEntities,
+  extractFilename,
+};

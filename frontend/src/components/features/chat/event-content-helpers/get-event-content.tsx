@@ -4,6 +4,7 @@ import { isOpenHandsAction, isOpenHandsObservation } from "#/types/core/guards";
 import { OpenHandsObservation } from "#/types/core/observations";
 import { MonoComponent } from "../mono-component";
 import { PathComponent } from "../path-component";
+import { ClickableFilePath } from "../clickable-file-path";
 import { getActionContent } from "./get-action-content";
 import { getObservationContent } from "./get-observation-content";
 import i18n from "#/i18n";
@@ -53,6 +54,10 @@ export const getEventContent = (
 
     // If translation key exists, use Trans component
     if (i18n.exists(observationKey)) {
+      // Use ClickableFilePath for read observations, PathComponent for others
+      const PathComponentToUse =
+        event.observation === "read" ? ClickableFilePath : PathComponent;
+
       title = (
         <Trans
           i18nKey={observationKey}
@@ -62,7 +67,7 @@ export const getEventContent = (
             mcp_tool_name: event.observation === "mcp" && event.extras.name,
           }}
           components={{
-            path: <PathComponent />,
+            path: <PathComponentToUse />,
             cmd: <MonoComponent />,
           }}
         />

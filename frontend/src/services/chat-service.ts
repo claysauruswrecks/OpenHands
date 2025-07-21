@@ -12,3 +12,11 @@ export function createChatMessage(
   };
   return event;
 }
+
+export function createVSCodeOpenFileAction(filePath: string) {
+  const event = {
+    action: ActionType.VSCODE_OPEN_FILE,
+    args: { file_path: filePath },
+  };
+  return event;
+}
