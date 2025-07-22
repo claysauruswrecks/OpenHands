@@ -131,6 +131,7 @@ RUN mkdir -p ${OPENVSCODE_HOME_ROOT}/extensions/openhands.memory-monitor-0.0.1 &
 RUN rm -rf ${OPENVSCODE_HOME_ROOT}/extensions/{handlebars,pug,json,diff,grunt,ini,npm}
 
 RUN ${OPENVSCODE_SERVER_ROOT}/bin/remote-cli/code --install-extension eliostruyf.vscode-remote-control-1.8.0
+RUN ${OPENVSCODE_SERVER_ROOT}/bin/remote-cli/code --install-extension vscodevim.vim
 
 # Set proper ownership for openhands user extensions
 RUN chown -R openhands ${OPENVSCODE_HOME_ROOT}
