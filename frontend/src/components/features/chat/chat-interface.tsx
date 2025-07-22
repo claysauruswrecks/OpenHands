@@ -20,6 +20,7 @@ import { Messages } from "./messages";
 import { ChatSuggestions } from "./chat-suggestions";
 import { ActionSuggestions } from "./action-suggestions";
 import { ScrollProvider } from "#/context/scroll-context";
+import { useFileCache } from "#/hooks/use-file-cache";
 
 import { ScrollToBottomButton } from "#/components/shared/buttons/scroll-to-bottom-button";
 import { ScrollToTopButton } from "#/components/shared/buttons/scroll-to-top-button";
@@ -57,6 +58,10 @@ function ChatInterfaceContent() {
   const { setOptimisticUserMessage, getOptimisticUserMessage } =
     useOptimisticUserMessage();
   const { t } = useTranslation();
+
+  // Pre-load file cache for instant autocomplete on first @ symbol
+  // This ensures files are already cached when user first types "@"
+  useFileCache();
   const scrollRef = React.useRef<HTMLDivElement>(null);
   const {
     scrollDomToBottom,
@@ -238,6 +243,7 @@ function ChatInterfaceContent() {
 
         <div
           ref={scrollRef}
+          data-testid="chat-messages-container"
           onScroll={(e) => onChatBodyScroll(e.currentTarget)}
           className="scrollbar scrollbar-thin scrollbar-thumb-gray-400 scrollbar-thumb-rounded-full scrollbar-track-gray-800 hover:scrollbar-thumb-gray-300 flex flex-col grow overflow-y-auto overflow-x-hidden px-2 pt-4 gap-2 fast-smooth-scroll"
         >

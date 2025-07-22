@@ -5,6 +5,9 @@ import { I18nKey } from "#/i18n/declaration";
 import { cn } from "#/utils/utils";
 import { SubmitButton } from "#/components/shared/buttons/submit-button";
 import { StopButton } from "#/components/shared/buttons/stop-button";
+import { FileAutocomplete } from "./file-autocomplete";
+import { useFileAutocomplete } from "#/hooks/use-file-autocomplete";
+import { useFileCache } from "#/hooks/use-file-cache";
 
 interface ChatInputProps {
   name?: string;
@@ -42,6 +45,36 @@ export function ChatInput({
   const { t } = useTranslation();
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   const [isDraggingOver, setIsDraggingOver] = React.useState(false);
+
+  // Get cache refresh function for focus handler
+  const { refreshCache } = useFileCache();
+
+  // File autocomplete functionality
+  const {
+    autocompleteState,
+    handleFileSelect,
+    handleClose,
+    textAreaProps: autocompleteProps,
+  } = useFileAutocomplete({
+    onFileSelect: (filePath) => {
+      // When a file is selected, we need to update the controlled value
+      // The hook will update the textarea directly, but we need to sync with the controlled component
+      if (textareaRef.current) {
+        const newValue = textareaRef.current.value;
+        onChange?.(newValue);
+      }
+    },
+  });
+
+  // Enhanced focus handler that refreshes cache
+  const handleFocusWithCache = React.useCallback(
+    (event: React.FocusEvent<HTMLTextAreaElement>) => {
+      // Refresh cache when user focuses on input for fresh file list
+      refreshCache();
+      onFocus?.();
+    },
+    [onFocus, refreshCache],
+  );
 
   const handlePaste = (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
     // Only handle paste if we have an image paste handler and there are files
@@ -100,23 +133,57 @@ export function ChatInput({
     }
   };
 
-  const handleChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
-    onChange?.(event.target.value);
-  };
+  // Combine refs
+  const combinedRef = React.useCallback(
+    (element: HTMLTextAreaElement | null) => {
+      textareaRef.current = element;
+      autocompleteProps.ref(element);
+    },
+    [autocompleteProps.ref],
+  );
+
+  // Combine onChange handlers
+  const handleChangeCombined = React.useCallback(
+    (event: React.ChangeEvent<HTMLTextAreaElement>) => {
+      // First call the autocomplete handler
+      autocompleteProps.onChange(event);
+      // Then call the original onChange handler
+      onChange?.(event.target.value);
+    },
+    [autocompleteProps.onChange, onChange],
+  );
+
+  // Combine onKeyDown handlers
+  const handleKeyDown = React.useCallback(
+    (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      autocompleteProps.onKeyDown(event);
+      handleKeyPress(event);
+    },
+    [autocompleteProps.onKeyDown, handleKeyPress],
+  );
+
+  // Combine onBlur handlers
+  const handleBlurCombined = React.useCallback(
+    (event: React.FocusEvent<HTMLTextAreaElement>) => {
+      autocompleteProps.onBlur();
+      onBlur?.();
+    },
+    [autocompleteProps.onBlur, onBlur],
+  );
 
   return (
     <div
       data-testid="chat-input"
-      className="flex items-end justify-end grow gap-1 min-h-6 w-full"
+      className="flex items-end justify-end grow gap-1 min-h-6 w-full relative"
     >
       <TextareaAutosize
-        ref={textareaRef}
+        ref={combinedRef}
         name={name}
         placeholder={t(I18nKey.SUGGESTIONS$WHAT_TO_BUILD)}
-        onKeyDown={handleKeyPress}
-        onChange={handleChange}
-        onFocus={onFocus}
-        onBlur={onBlur}
+        onKeyDown={handleKeyDown}
+        onChange={handleChangeCombined}
+        onFocus={handleFocusWithCache}
+        onBlur={handleBlurCombined}
         onPaste={handlePaste}
         onDrop={handleDrop}
         onDragOver={handleDragOver}
@@ -144,6 +211,15 @@ export function ChatInput({
           )}
         </div>
       )}
+
+      {/* File Autocomplete Dropdown */}
+      <FileAutocomplete
+        isVisible={autocompleteState.isVisible}
+        query={autocompleteState.query}
+        position={autocompleteState.position}
+        onSelect={handleFileSelect}
+        onClose={handleClose}
+      />
     </div>
   );
 }
