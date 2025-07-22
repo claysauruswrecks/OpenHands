@@ -67,7 +67,7 @@ class VSCodeRemoteControlService {
         ws.onopen = () => {
           try {
             ws.send(JSON.stringify(command));
-            console.log(`Sent VSCode command on port ${targetPort}:`, command);
+            // Sent VSCode command on port
 
             // Close connection after a brief delay to ensure command is processed
             setTimeout(() => {
@@ -84,9 +84,9 @@ class VSCodeRemoteControlService {
           }
         };
 
-        ws.onerror = (error) => {
+        ws.onerror = () => {
           clearTimeout(timeoutId);
-          console.error("VSCode remote control connection error:", error);
+          // VSCode remote control connection error
           reject(
             new Error(
               `Failed to connect to VSCode remote control on port ${targetPort}. Make sure the vscode-remote-control extension is installed and enabled.`,
@@ -97,10 +97,7 @@ class VSCodeRemoteControlService {
         ws.onclose = (event) => {
           clearTimeout(timeoutId);
           if (!event.wasClean && event.code !== 1000) {
-            console.warn(
-              "VSCode remote control websocket closed unexpectedly. Code:",
-              event.code,
-            );
+            // VSCode remote control websocket closed unexpectedly
           }
         };
       } catch (error) {
@@ -123,7 +120,7 @@ class VSCodeRemoteControlService {
     return this.sendCommand(
       {
         command: commandId,
-        args: args,
+        args,
       },
       port,
     );

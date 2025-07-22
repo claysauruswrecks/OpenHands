@@ -1,6 +1,5 @@
 import React, { ReactNode } from "react";
-import { extractFilename } from "./path-component";
-import { decodeHtmlEntities } from "./path-component";
+import { extractFilename, decodeHtmlEntities } from "./path-component";
 import { useVSCodeRemoteControl } from "#/hooks/use-vscode-remote-control";
 
 interface ClickableFilePathProps {
@@ -35,15 +34,8 @@ function ClickableFilePath({ children }: ClickableFilePathProps) {
         // If it's some other absolute path, keep it as-is
       }
 
-      try {
-        await openFile(decodedPath);
-        console.log(`Successfully opened file in VSCode: ${decodedPath}`);
-      } catch (error) {
-        console.error("Failed to open file in VSCode:", error);
-        console.warn(
-          "Make sure the vscode-remote-control extension is installed and enabled in the runtime container",
-        );
-      }
+      await openFile(decodedPath);
+      // Successfully opened file in VSCode
     };
 
     return (
