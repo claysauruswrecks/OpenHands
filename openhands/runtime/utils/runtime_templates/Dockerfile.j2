@@ -8,9 +8,7 @@ ENV POETRY_VIRTUALENVS_PATH=/openhands/poetry \
     EDITOR=code \
     VISUAL=code \
     GIT_EDITOR="code --wait" \
-    OPENVSCODE_SERVER_ROOT=/openhands/.openvscode-server \
-    OPENVSCODE_HOME_ROOT=/home/openhands/.openvscode-server \
-    OPENVSCODE_DATA_ROOT=/home/openhands/.openvscode-server/data
+    OPENVSCODE_SERVER_ROOT=/openhands/.openvscode-server
 
 RUN groupadd app
 RUN useradd -l -m -s /bin/bash openhands && \
@@ -110,9 +108,11 @@ RUN if [ -z "${RELEASE_TAG}" ]; then \
     if [ -d "${OPENVSCODE_SERVER_ROOT}" ]; then rm -rf "${OPENVSCODE_SERVER_ROOT}"; fi && \
     mv ${RELEASE_TAG}-linux-${arch} ${OPENVSCODE_SERVER_ROOT} && \
     cp ${OPENVSCODE_SERVER_ROOT}/bin/remote-cli/openvscode-server ${OPENVSCODE_SERVER_ROOT}/bin/remote-cli/code && \
-    rm -f ${RELEASE_TAG}-linux-${arch}.tar.gz
+    rm -f ${RELEASE_TAG}-linux-${arch}.tar.gz && \
+    rm -rf ${OPENVSCODE_SERVER_ROOT}/extensions/node_modules
 
-
+# Set proper ownership
+RUN chown -R openhands:openhands ${OPENVSCODE_SERVER_ROOT}
 
 {% endmacro %}
 
@@ -121,22 +121,17 @@ RUN if [ -z "${RELEASE_TAG}" ]; then \
 # RUN useradd -m -s /bin/bash openhands || true
 
 # Install our custom extensions in OpenVSCode Server's extensions directory
-RUN mkdir -p ${OPENVSCODE_HOME_ROOT}/extensions/openhands.hello-world-0.0.1 && \
-    cp -r /openhands/code/openhands/runtime/utils/vscode-extensions/hello-world/* ${OPENVSCODE_HOME_ROOT}/extensions/openhands.hello-world-0.0.1/
+RUN mkdir -p ${OPENVSCODE_SERVER_ROOT}/extensions/openhands.hello-world-0.0.1 && \
+    cp -r /openhands/code/openhands/runtime/utils/vscode-extensions/hello-world/* ${OPENVSCODE_SERVER_ROOT}/extensions/openhands.hello-world-0.0.1/
 
-RUN mkdir -p ${OPENVSCODE_HOME_ROOT}/extensions/openhands.memory-monitor-0.0.1 && \
-    cp -r /openhands/code/openhands/runtime/utils/vscode-extensions/memory-monitor/* ${OPENVSCODE_HOME_ROOT}/extensions/openhands.memory-monitor-0.0.1/
+RUN mkdir -p ${OPENVSCODE_SERVER_ROOT}/extensions/openhands.memory-monitor-0.0.1 && \
+    cp -r /openhands/code/openhands/runtime/utils/vscode-extensions/memory-monitor/* ${OPENVSCODE_SERVER_ROOT}/extensions/openhands.memory-monitor-0.0.1/
 
 # Some extension dirs are removed because they trigger false positives in vulnerability scans.
-RUN rm -rf ${OPENVSCODE_HOME_ROOT}/extensions/{handlebars,pug,json,diff,grunt,ini,npm}
-
-RUN ${OPENVSCODE_SERVER_ROOT}/bin/remote-cli/code --install-extension eliostruyf.vscode-remote-control-1.8.0
-RUN ${OPENVSCODE_SERVER_ROOT}/bin/remote-cli/code --install-extension vscodevim.vim
+RUN rm -rf ${OPENVSCODE_SERVER_ROOT}/extensions/{handlebars,pug,json,diff,grunt,ini,npm}
 
 # Set proper ownership for openhands user extensions
-RUN chown -R openhands ${OPENVSCODE_HOME_ROOT}
 RUN chown -R openhands ${OPENVSCODE_SERVER_ROOT}
-RUN chown -R openhands ${OPENVSCODE_DATA_ROOT}
 {% endmacro %}
 
 {% macro install_dependencies() %}
@@ -214,26 +209,25 @@ RUN chmod a+rwx /openhands/code/openhands/__init__.py
 #     rm -rf node_modules package-lock.json && \
 #     npm install && \
 #     npm run package-vsix && \
-#     mkdir -p /home/openhands/.openvscode-server/extensions && \
-#     cd /home/openhands/.openvscode-server/extensions && \
+#     mkdir -p ${OPENVSCODE_SERVER_ROOT}/extensions && \
+#     cd ${OPENVSCODE_SERVER_ROOT}/extensions && \
 #     unzip -q /openhands/code/openhands/integrations/vscode/openhands-vscode-0.0.1.vsix && \
 #     mv extension openhands.openhands-vscode-0.0.1 && \
-#     chown -R openhands:openhands /home/openhands/.openvscode-server/
+#     chown -R openhands:openhands ${OPENVSCODE_SERVER_ROOT}
 
 # Install vscode-remote-control extension for clickable file paths
-# Build and install from source to avoid marketplace issues
-# RUN mkdir -p /tmp/vscode-remote-control && \
-#     cd /tmp/vscode-remote-control && \
-#     git clone https://github.com/estruyf/vscode-remote-control.git . && \
-#     npm install && \
-#     npm install -g @vscode/vsce && \
-#     npx @vscode/vsce package --no-yarn && \
-#     mkdir -p ${OPENVSCODE_HOME_ROOT}/extensions && \
-#     cd ${OPENVSCODE_HOME_ROOT}/extensions && \
-#     unzip -q /tmp/vscode-remote-control/*.vsix && \
-#     mv extension eliostruyf.vscode-remote-control-1.8.0 && \
-#     rm -rf /tmp/vscode-remote-control && \
-#     chown -R openhands:openhands ${OPENVSCODE_HOME_ROOT}
+RUN mkdir -p /tmp/vscode-remote-control && \
+    cd /tmp/vscode-remote-control && \
+    git clone --depth 1 https://github.com/estruyf/vscode-remote-control.git . && \
+    npm install && \
+    npm install -g @vscode/vsce && \
+    npx @vscode/vsce package --no-yarn && \
+    mkdir -p ${OPENVSCODE_SERVER_ROOT}/extensions && \
+    cd ${OPENVSCODE_SERVER_ROOT}/extensions && \
+    unzip -q /tmp/vscode-remote-control/*.vsix && \
+    mv extension eliostruyf.vscode-remote-control-1.8.0 && \
+    rm -rf /tmp/vscode-remote-control && \
+    chown -R openhands:openhands ${OPENVSCODE_SERVER_ROOT}
 
 
 

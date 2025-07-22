@@ -2,7 +2,7 @@
   "workbench.colorTheme": "Default Dark Modern",
   "workbench.startupEditor": "none",
   "remoteControl.enable": true,
-  "remoteControl.host": "localhost",
+  "remoteControl.host": "0.0.0.0",
   "remoteControl.allowCommands": [
     "vscode.open",
     "workbench.action.files.openFile"

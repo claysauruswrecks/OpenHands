@@ -18,6 +18,7 @@ interface UseVSCodeRemoteControlReturn extends UseVSCodeRemoteControlState {
   clearError: () => void;
   port: number | null;
   isPortLoading: boolean;
+  isPortError: boolean;
 }
 
 /**
@@ -58,13 +59,14 @@ export function useVSCodeRemoteControl(): UseVSCodeRemoteControlReturn {
         setError(null);
 
         if (!port) {
-          throw new Error(
-            portError
-              ? `Failed to get VSCode remote control port: ${portError}`
-              : "VSCode remote control port not available",
-          );
+          const errorMsg = portError
+            ? `Failed to get VSCode remote control port: ${portError}`
+            : "VSCode remote control port not available";
+          console.warn(errorMsg);
+          throw new Error(errorMsg);
         }
 
+        console.debug(`Opening file in VSCode on port ${port}: ${filePath}`);
         await vscodeRemoteControl.openFile(filePath, port);
       } catch (error) {
         const err = error instanceof Error ? error : new Error(String(error));
@@ -84,13 +86,16 @@ export function useVSCodeRemoteControl(): UseVSCodeRemoteControlReturn {
         setError(null);
 
         if (!port) {
-          throw new Error(
-            portError
-              ? `Failed to get VSCode remote control port: ${portError}`
-              : "VSCode remote control port not available",
-          );
+          const errorMsg = portError
+            ? `Failed to get VSCode remote control port: ${portError}`
+            : "VSCode remote control port not available";
+          console.warn(errorMsg);
+          throw new Error(errorMsg);
         }
 
+        console.debug(
+          `Opening file at position in VSCode on port ${port}: ${filePath}:${line}:${column}`,
+        );
         await vscodeRemoteControl.openFileAtPosition(
           filePath,
           line,
@@ -115,13 +120,18 @@ export function useVSCodeRemoteControl(): UseVSCodeRemoteControlReturn {
         setError(null);
 
         if (!port) {
-          throw new Error(
-            portError
-              ? `Failed to get VSCode remote control port: ${portError}`
-              : "VSCode remote control port not available",
-          );
+          const errorMsg = portError
+            ? `Failed to get VSCode remote control port: ${portError}`
+            : "VSCode remote control port not available";
+          console.warn(errorMsg);
+          throw new Error(errorMsg);
         }
 
+        console.debug(
+          `Executing VSCode command on port ${port}:`,
+          commandId,
+          args,
+        );
         await vscodeRemoteControl.executeCommand(commandId, port, ...args);
       } catch (error) {
         const err = error instanceof Error ? error : new Error(String(error));
@@ -142,5 +152,6 @@ export function useVSCodeRemoteControl(): UseVSCodeRemoteControlReturn {
     clearError,
     port,
     isPortLoading,
+    isPortError: !!portError,
   };
 }

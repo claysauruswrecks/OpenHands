@@ -59,7 +59,7 @@ class VSCodeRemoteControlService {
           ws.close();
           reject(
             new Error(
-              `VSCode remote control connection timeout after ${this.config.timeout}ms`,
+              `Connection timeout: VSCode remote control extension did not respond within ${this.config.timeout}ms on port ${targetPort}`,
             ),
           );
         }, this.config.timeout);
@@ -67,7 +67,10 @@ class VSCodeRemoteControlService {
         ws.onopen = () => {
           try {
             ws.send(JSON.stringify(command));
-            // Sent VSCode command on port
+            console.debug(
+              `Sent VSCode command on port ${targetPort}:`,
+              command,
+            );
 
             // Close connection after a brief delay to ensure command is processed
             setTimeout(() => {
@@ -80,16 +83,19 @@ class VSCodeRemoteControlService {
           } catch (error) {
             clearTimeout(timeoutId);
             ws.close();
-            reject(new Error(`Failed to send command: ${error}`));
+            reject(new Error(`Failed to send command to VSCode: ${error}`));
           }
         };
 
-        ws.onerror = () => {
+        ws.onerror = (event) => {
           clearTimeout(timeoutId);
-          // VSCode remote control connection error
+          console.error("VSCode remote control websocket error:", event);
           reject(
             new Error(
-              `Failed to connect to VSCode remote control on port ${targetPort}. Make sure the vscode-remote-control extension is installed and enabled.`,
+              `Cannot connect to VSCode remote control on port ${targetPort}. Please ensure:
+1. VSCode is running in the container
+2. The vscode-remote-control extension is installed and enabled
+3. The extension is listening on port ${targetPort}`,
             ),
           );
         };
@@ -97,7 +103,9 @@ class VSCodeRemoteControlService {
         ws.onclose = (event) => {
           clearTimeout(timeoutId);
           if (!event.wasClean && event.code !== 1000) {
-            // VSCode remote control websocket closed unexpectedly
+            console.warn(
+              `VSCode remote control websocket closed unexpectedly: ${event.code} ${event.reason}`,
+            );
           }
         };
       } catch (error) {
