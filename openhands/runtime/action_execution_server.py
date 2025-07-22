@@ -47,7 +47,6 @@ from openhands.events.action import (
     FileReadAction,
     FileWriteAction,
     IPythonRunCellAction,
-    VSCodeOpenFileAction,
 )
 from openhands.events.event import FileEditSource, FileReadSource
 from openhands.events.observation import (
@@ -180,11 +179,41 @@ class ActionExecutor:
         self._initial_cwd = work_dir
         self.username = username
         self.user_id = user_id
+
+        # DEBUG: Log current user/group info before and after initialization
+        import os
+        import pwd
+        import grp
+
+        try:
+            current_uid = os.getuid()
+            current_gid = os.getgid()
+            current_user = pwd.getpwuid(current_uid).pw_name
+            current_group = grp.getgrgid(current_gid).gr_name
+            logger.warning(
+                f"DEBUG: Process running as UID={current_uid}({current_user}) GID={current_gid}({current_group})"
+            )
+            logger.warning(f"DEBUG: Requested username={username} user_id={user_id}")
+        except Exception as e:
+            logger.warning(f"DEBUG: Error getting current user info: {e}")
+
         _updated_user_id = init_user_and_working_directory(
             username=username, user_id=self.user_id, initial_cwd=work_dir
         )
         if _updated_user_id is not None:
             self.user_id = _updated_user_id
+
+        # DEBUG: Log user/group info after initialization
+        try:
+            current_uid = os.getuid()
+            current_gid = os.getgid()
+            current_user = pwd.getpwuid(current_uid).pw_name
+            current_group = grp.getgrgid(current_gid).gr_name
+            logger.warning(
+                f"DEBUG: After init, process running as UID={current_uid}({current_user}) GID={current_gid}({current_group})"
+            )
+        except Exception as e:
+            logger.warning(f"DEBUG: Error getting post-init user info: {e}")
 
         self.bash_session: BashSession | "WindowsPowershellSession" | None = None  # type: ignore[name-defined]
         self.lock = asyncio.Lock()
@@ -665,162 +694,6 @@ class ActionExecutor:
             self.bash_session.close()
         if self.browser is not None:
             self.browser.close()
-
-    async def call_tool_mcp(self, action: MCPAction) -> Observation:
-        # This is a special case for MCP actions
-        # Call the dynamic tool instance
-        try:
-            kwargs = action.arguments
-            # Check if we need to forward this to a server at all
-            # if there's no such tool with the ID, treat it as a normal action
-
-            # Temporarily, allow calling any function using the MCP action
-            # In the future this might not be allowed!
-            server_id = action.name.split(":")[0]
-            tool_id = action.name.split(":", 1)[1]
-
-            if server_id == "openhands":
-                logger.warning(
-                    f'WARNING: Attempting to call a tool with name "{action.name}". '
-                    "This is a temporary measure to allow calling any function using the MCP action. "
-                    "This functionality might not be allowed in the future!"
-                )
-                # Split the tool ID to get the module and function name
-                parts = tool_id.split(".")
-                module_name = ".".join(parts[:-1])
-                function_name = parts[-1]
-
-                # Import the module and get the function
-                module = __import__(module_name, fromlist=[function_name])
-                func = getattr(module, function_name)
-
-                # Call the function with the provided arguments
-                result = (
-                    await func(**kwargs)
-                    if asyncio.iscoroutinefunction(func)
-                    else func(**kwargs)
-                )
-                logger.debug(
-                    f'Result from calling function "{function_name}" in module "{module_name}": {result}'
-                )
-                from openhands.events.observation.observation import MCPObservation
-
-                return MCPObservation(content=str(result), mcp_tool_name=action.name)
-
-            # Query the proxy manager to call the tool
-            global mcp_proxy_manager
-
-            if mcp_proxy_manager is None:
-                err_msg = "MCP Proxy Manager is not initialized"
-                logger.error(err_msg)
-                from openhands.events.observation.error import ErrorObservation
-
-                return ErrorObservation(err_msg)
-
-            result = await mcp_proxy_manager.call_tool(server_id, tool_id, kwargs)
-            logger.info(f"MCP tool call result: {result}")
-
-            from openhands.events.observation.observation import MCPObservation
-
-            return MCPObservation(
-                content=json.dumps(result) if result else "", mcp_tool_name=action.name
-            )
-
-        except Exception as e:
-            err_msg = f"Error calling MCP tool: {e}"
-            logger.error(err_msg, exc_info=True)
-            from openhands.events.observation.error import ErrorObservation
-
-            return ErrorObservation(err_msg)
-
-    async def vscode_open_file(self, action: VSCodeOpenFileAction) -> Observation:
-        """Handle opening a file in VSCode server running in the runtime container."""
-        try:
-            # Check if VSCode plugin is available
-            vscode_plugin = self.plugins.get("vscode")
-            if not vscode_plugin or not isinstance(vscode_plugin, VSCodePlugin):
-                error_msg = "VSCode plugin is not available or not properly initialized"
-                logger.error(error_msg)
-                from openhands.events.observation.error import ErrorObservation
-
-                return ErrorObservation(error_msg)
-
-            # Get the VSCode connection token
-            connection_token = vscode_plugin.vscode_connection_token
-            if not connection_token:
-                error_msg = "VSCode connection token is not available"
-                logger.error(error_msg)
-                from openhands.events.observation.error import ErrorObservation
-
-                return ErrorObservation(error_msg)
-
-            # Get the VSCode port
-            vscode_port = vscode_plugin.vscode_port
-            if not vscode_port:
-                error_msg = "VSCode port is not available"
-                logger.error(error_msg)
-                from openhands.events.observation.error import ErrorObservation
-
-                return ErrorObservation(error_msg)
-
-            # Construct the file path
-            file_path = action.file_path
-            if not file_path.startswith("/"):
-                # Make it absolute path in the workspace
-                file_path = f"/workspace/{file_path}"
-
-            # VSCode server API call to open file
-            # The VSCode server has a REST API we can use to open files
-            vscode_url = f"http://localhost:{vscode_port}"
-
-            # Use the VSCode server REST API to open the file
-            # This uses the same approach as the frontend - send the file parameter
-            api_url = f"{vscode_url}/api/files/{file_path.lstrip('/')}"
-
-            headers = {
-                "Authorization": f"Bearer {connection_token}",
-                "Content-Type": "application/json",
-            }
-
-            # Make a simple HTTP request to signal VSCode to open the file
-            # This is a simplified approach - in a real implementation you might
-            # need to use VSCode's specific API endpoints
-            try:
-                import httpx
-
-                async with httpx.AsyncClient() as client:
-                    response = await client.get(api_url, headers=headers, timeout=10.0)
-                    if response.status_code == 200:
-                        success_msg = f"Successfully opened file in VSCode: {file_path}"
-                        logger.info(success_msg)
-                        from openhands.events.observation.observation import (
-                            NullObservation,
-                        )
-
-                        return NullObservation(success_msg)
-                    else:
-                        error_msg = f"Failed to open file in VSCode. Status: {response.status_code}"
-                        logger.warning(error_msg)
-                        from openhands.events.observation.error import ErrorObservation
-
-                        return ErrorObservation(error_msg)
-            except Exception as api_error:
-                # If the API approach fails, we can fall back to a simpler method
-                # Just log that we attempted to open the file
-                warning_msg = f"Could not communicate with VSCode API (this is expected in some setups): {api_error}. File open request for {file_path} has been logged."
-                logger.warning(warning_msg)
-                from openhands.events.observation.observation import NullObservation
-
-                return NullObservation(
-                    f"VSCode file open request logged for: {file_path}"
-                )
-
-        except Exception as e:
-            error_msg = f"Error opening file in VSCode: {e}"
-            logger.error(error_msg, exc_info=True)
-            from openhands.events.observation.error import ErrorObservation
-
-            return ErrorObservation(error_msg)
 
 
 if __name__ == "__main__":

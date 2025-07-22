@@ -243,6 +243,18 @@ class OpenHands {
     return data;
   }
 
+  static async getVSCodeRemoteControlPort(
+    conversationId: string,
+  ): Promise<{ vscode_remote_control_port: number | null }> {
+    const url = `${this.getConversationUrl(conversationId)}/vscode-remote-control-port`;
+    const { data } = await openHands.get<{
+      vscode_remote_control_port: number | null;
+    }>(url, {
+      headers: this.getConversationHeaders(),
+    });
+    return data;
+  }
+
   static async getUserConversations(): Promise<Conversation[]> {
     const { data } = await openHands.get<ResultSet<Conversation>>(
       "/api/conversations?limit=20",

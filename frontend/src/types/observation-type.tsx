@@ -40,6 +40,9 @@ enum ObservationType {
 
   // A no-op observation
   NULL = "null",
+
+  // VSCode file open observation
+  VSCODE_FILE_OPEN = "vscode_file_open",
 }
 
 export default ObservationType;

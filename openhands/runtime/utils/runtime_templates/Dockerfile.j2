@@ -8,15 +8,22 @@ ENV POETRY_VIRTUALENVS_PATH=/openhands/poetry \
     EDITOR=code \
     VISUAL=code \
     GIT_EDITOR="code --wait" \
-    OPENVSCODE_SERVER_ROOT=/openhands/.openvscode-server
+    OPENVSCODE_SERVER_ROOT=/openhands/.openvscode-server \
+    OPENVSCODE_HOME_ROOT=/home/openhands/.openvscode-server \
+    OPENVSCODE_DATA_ROOT=/home/openhands/.openvscode-server/data
+
+RUN groupadd app
+RUN useradd -l -m -s /bin/bash openhands && \
+    usermod -aG app openhands && \
+    usermod -aG sudo openhands
 
 {% macro setup_base_system() %}
 
 # Install base system dependencies
 
 {% if (('ubuntu' in base_image) or ('mswebench' in base_image)) %}
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
+RUN DEBIAN_FRONTEND=noninteractive apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
         wget curl ca-certificates sudo apt-utils git jq tmux build-essential ripgrep ffmpeg \
         {%- if (base_image.endswith(':latest') or base_image.endswith(':24.04') or ('mswebench' in base_image)) -%}
         libgl1 \
@@ -33,16 +40,22 @@ RUN apt-get update && \
         {% endif -%}
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
+
+# Configure sudo after installation
+RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 {% endif %}
 
 {% if (('ubuntu' not in base_image) and ('mswebench' not in base_image)) %}
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
+RUN DEBIAN_FRONTEND=noninteractive apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
         wget curl ca-certificates sudo apt-utils git jq tmux build-essential ripgrep ffmpeg \
         libgl1-mesa-glx \
         libasound2-plugins libatomic1 && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
+
+# Configure sudo after installation
+RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 {% endif %}
 
 {% if (('ubuntu' in base_image) or ('mswebench' in base_image)) %}
@@ -104,15 +117,25 @@ RUN if [ -z "${RELEASE_TAG}" ]; then \
 {% endmacro %}
 
 {% macro install_vscode_extensions() %}
-# Install our custom extension
-RUN mkdir -p ${OPENVSCODE_SERVER_ROOT}/extensions/openhands-hello-world && \
-    cp -r /openhands/code/openhands/runtime/utils/vscode-extensions/hello-world/* ${OPENVSCODE_SERVER_ROOT}/extensions/openhands-hello-world/
+# Create openhands user for VSCode extensions
+# RUN useradd -m -s /bin/bash openhands || true
 
-RUN mkdir -p ${OPENVSCODE_SERVER_ROOT}/extensions/openhands-memory-monitor && \
-    cp -r /openhands/code/openhands/runtime/utils/vscode-extensions/memory-monitor/* ${OPENVSCODE_SERVER_ROOT}/extensions/openhands-memory-monitor/
+# Install our custom extensions in OpenVSCode Server's extensions directory
+RUN mkdir -p ${OPENVSCODE_HOME_ROOT}/extensions/openhands.hello-world-0.0.1 && \
+    cp -r /openhands/code/openhands/runtime/utils/vscode-extensions/hello-world/* ${OPENVSCODE_HOME_ROOT}/extensions/openhands.hello-world-0.0.1/
+
+RUN mkdir -p ${OPENVSCODE_HOME_ROOT}/extensions/openhands.memory-monitor-0.0.1 && \
+    cp -r /openhands/code/openhands/runtime/utils/vscode-extensions/memory-monitor/* ${OPENVSCODE_HOME_ROOT}/extensions/openhands.memory-monitor-0.0.1/
 
 # Some extension dirs are removed because they trigger false positives in vulnerability scans.
-RUN rm -rf ${OPENVSCODE_SERVER_ROOT}/extensions/{handlebars,pug,json,diff,grunt,ini,npm}
+RUN rm -rf ${OPENVSCODE_HOME_ROOT}/extensions/{handlebars,pug,json,diff,grunt,ini,npm}
+
+RUN ${OPENVSCODE_SERVER_ROOT}/bin/remote-cli/code --install-extension eliostruyf.vscode-remote-control-1.8.0
+
+# Set proper ownership for openhands user extensions
+RUN chown -R openhands ${OPENVSCODE_HOME_ROOT}
+RUN chown -R openhands ${OPENVSCODE_SERVER_ROOT}
+RUN chown -R openhands ${OPENVSCODE_DATA_ROOT}
 {% endmacro %}
 
 {% macro install_dependencies() %}
@@ -184,6 +207,32 @@ COPY ./code/pyproject.toml ./code/poetry.lock /openhands/code/
 
 COPY ./code/openhands /openhands/code/openhands
 RUN chmod a+rwx /openhands/code/openhands/__init__.py
+
+# # Install OpenHands main VSCode extension by building from source
+# RUN cd /openhands/code/openhands/integrations/vscode && \
+#     rm -rf node_modules package-lock.json && \
+#     npm install && \
+#     npm run package-vsix && \
+#     mkdir -p /home/openhands/.openvscode-server/extensions && \
+#     cd /home/openhands/.openvscode-server/extensions && \
+#     unzip -q /openhands/code/openhands/integrations/vscode/openhands-vscode-0.0.1.vsix && \
+#     mv extension openhands.openhands-vscode-0.0.1 && \
+#     chown -R openhands:openhands /home/openhands/.openvscode-server/
+
+# Install vscode-remote-control extension for clickable file paths
+# Build and install from source to avoid marketplace issues
+# RUN mkdir -p /tmp/vscode-remote-control && \
+#     cd /tmp/vscode-remote-control && \
+#     git clone https://github.com/estruyf/vscode-remote-control.git . && \
+#     npm install && \
+#     npm install -g @vscode/vsce && \
+#     npx @vscode/vsce package --no-yarn && \
+#     mkdir -p ${OPENVSCODE_HOME_ROOT}/extensions && \
+#     cd ${OPENVSCODE_HOME_ROOT}/extensions && \
+#     unzip -q /tmp/vscode-remote-control/*.vsix && \
+#     mv extension eliostruyf.vscode-remote-control-1.8.0 && \
+#     rm -rf /tmp/vscode-remote-control && \
+#     chown -R openhands:openhands ${OPENVSCODE_HOME_ROOT}
 
 
 

@@ -1,6 +1,6 @@
 import * as path from "path";
 import Mocha = require("mocha"); // Changed import style
-import glob = require("glob"); // Changed import style
+import { glob } from "glob"; // Updated import for newer glob versions
 
 export function run(): Promise<void> {
   // Create the mocha test

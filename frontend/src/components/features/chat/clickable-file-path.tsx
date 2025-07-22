@@ -1,8 +1,7 @@
 import React, { ReactNode } from "react";
 import { extractFilename } from "./path-component";
-import { useWsClient } from "#/context/ws-client-provider";
-import { createVSCodeOpenFileAction } from "#/services/chat-service";
 import { decodeHtmlEntities } from "./path-component";
+import { useVSCodeRemoteControl } from "#/hooks/use-vscode-remote-control";
 
 interface ClickableFilePathProps {
   children?: ReactNode;
@@ -10,11 +9,11 @@ interface ClickableFilePathProps {
 
 /**
  * Component that displays only the filename in the text but shows the full path on hover
- * Makes the filename clickable to open in VSCode tab via websocket to runtime
- * Similar to PathComponent but adds click functionality for VSCode integration
+ * Makes the filename clickable to open in VSCode via vscode-remote-control extension
+ * Connects directly to the extension's websocket server running on port 3710
  */
 function ClickableFilePath({ children }: ClickableFilePathProps) {
-  const { send } = useWsClient();
+  const { openFile, isConnecting } = useVSCodeRemoteControl();
 
   const processPath = (path: string) => {
     const filename = extractFilename(path);
@@ -26,23 +25,42 @@ function ClickableFilePath({ children }: ClickableFilePathProps) {
       // Decode HTML entities in the file path (handles &#x2F; -> / etc.)
       let decodedPath = decodeHtmlEntities(path);
 
-      // Ensure the path is workspace-relative for VSCode server
-      // VSCode server in the container has /workspace as the working directory
-      if (decodedPath.startsWith("/workspace/")) {
-        decodedPath = decodedPath.substring("/workspace/".length);
+      // Ensure the path is absolute for VSCode
+      // If it's workspace-relative, make it absolute within the container
+      if (!decodedPath.startsWith("/")) {
+        decodedPath = `/workspace/${decodedPath}`;
+      } else if (decodedPath.startsWith("/workspace/")) {
+        // Already absolute workspace path, use as-is
+      } else {
+        // If it's some other absolute path, keep it as-is
       }
 
-      // Send websocket action to runtime to open file in VSCode
-      send(createVSCodeOpenFileAction(decodedPath));
+      try {
+        await openFile(decodedPath);
+        console.log(`Successfully opened file in VSCode: ${decodedPath}`);
+      } catch (error) {
+        console.error("Failed to open file in VSCode:", error);
+        console.warn(
+          "Make sure the vscode-remote-control extension is installed and enabled in the runtime container",
+        );
+      }
     };
 
     return (
       <span
-        className="cursor-pointer text-blue-400 hover:text-blue-300 hover:underline font-mono"
-        onClick={handleClick}
-        title={`Click to open ${path} in VSCode`}
+        className={`cursor-pointer font-mono ${
+          isConnecting
+            ? "text-gray-400 hover:text-gray-300"
+            : "text-blue-400 hover:text-blue-300 hover:underline"
+        }`}
+        onClick={isConnecting ? undefined : handleClick}
+        title={
+          isConnecting
+            ? `Opening ${path}...`
+            : `Click to open ${path} in VSCode`
+        }
       >
-        {filename}
+        {isConnecting ? `${filename} (opening...)` : filename}
       </span>
     );
   };
