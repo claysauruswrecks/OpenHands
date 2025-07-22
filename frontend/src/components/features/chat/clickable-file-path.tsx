@@ -16,7 +16,9 @@ function ClickableFilePath({ children }: ClickableFilePathProps) {
     useVSCodeRemoteControl();
 
   const processPath = (path: string) => {
-    const filename = extractFilename(path);
+    // Decode HTML entities first, before any other processing
+    const decodedPath = decodeHtmlEntities(path);
+    const filename = extractFilename(decodedPath);
 
     const handleClick = async (event: React.MouseEvent) => {
       event.preventDefault();
@@ -31,22 +33,22 @@ function ClickableFilePath({ children }: ClickableFilePathProps) {
         return;
       }
 
-      // Decode HTML entities in the file path (handles &#x2F; -> / etc.)
-      let decodedPath = decodeHtmlEntities(path);
+      // Use the already decoded path
+      let finalPath = decodedPath;
 
       // Ensure the path is absolute for VSCode
       // If it's workspace-relative, make it absolute within the container
-      if (!decodedPath.startsWith("/")) {
-        decodedPath = `/workspace/${decodedPath}`;
-      } else if (decodedPath.startsWith("/workspace/")) {
+      if (!finalPath.startsWith("/")) {
+        finalPath = `/workspace/${finalPath}`;
+      } else if (finalPath.startsWith("/workspace/")) {
         // Already absolute workspace path, use as-is
       } else {
         // If it's some other absolute path, keep it as-is
       }
 
       try {
-        await openFile(decodedPath);
-        console.debug(`Successfully opened file in VSCode: ${decodedPath}`);
+        await openFile(finalPath);
+        console.debug(`Successfully opened file in VSCode: ${finalPath}`);
       } catch (error) {
         console.error(`Failed to open file in VSCode:`, error);
         // Error is already handled by the hook and stored in lastError
@@ -67,7 +69,7 @@ function ClickableFilePath({ children }: ClickableFilePathProps) {
         return {
           text: `${filename} (opening...)`,
           className: "text-gray-400 hover:text-gray-300",
-          title: `Opening ${path}...`,
+          title: `Opening ${decodedPath}...`,
           clickable: false,
         };
       }
@@ -77,7 +79,7 @@ function ClickableFilePath({ children }: ClickableFilePathProps) {
           text: `${filename} (connection failed)`,
           className:
             "text-red-400 hover:text-red-300 hover:underline cursor-pointer",
-          title: `Failed to open ${path}: ${lastError.message}. Click to retry.`,
+          title: `Failed to open ${decodedPath}: ${lastError.message}. Click to retry.`,
           clickable: true,
         };
       }
@@ -86,7 +88,7 @@ function ClickableFilePath({ children }: ClickableFilePathProps) {
         text: filename,
         className:
           "text-blue-400 hover:text-blue-300 hover:underline cursor-pointer",
-        title: `Click to open ${path} in VSCode`,
+        title: `Click to open ${decodedPath} in VSCode`,
         clickable: true,
       };
     };

@@ -19,7 +19,7 @@ import { ol, ul } from "../markdown/list";
 import { paragraph } from "../markdown/paragraph";
 import { pre } from "../markdown/pre";
 import { MonoComponent } from "./mono-component";
-import { PathComponent } from "./path-component";
+import { ClickableFilePath } from "./clickable-file-path";
 import { useExpandCollapse } from "#/context/expand-collapse-context";
 
 const trimText = (text: string, maxLength: number): string => {
@@ -333,7 +333,7 @@ export function ExpandableMessage({
                 values={translationParams}
                 components={{
                   bold: <strong />,
-                  path: <PathComponent />,
+                  path: <ClickableFilePath />,
                   cmd: <MonoComponent />,
                 }}
               />

@@ -37,7 +37,7 @@ export const getEventContent = (
             mcp_tool_name: event.action === "call_tool_mcp" && event.args.name,
           }}
           components={{
-            path: <PathComponent />,
+            path: <ClickableFilePath />,
             cmd: <MonoComponent />,
           }}
         />
@@ -54,10 +54,7 @@ export const getEventContent = (
 
     // If translation key exists, use Trans component
     if (i18n.exists(observationKey)) {
-      // Use ClickableFilePath for read observations, PathComponent for others
-      const PathComponentToUse =
-        event.observation === "read" ? ClickableFilePath : PathComponent;
-
+      // Use ClickableFilePath for all file paths to make them clickable and properly decoded
       title = (
         <Trans
           i18nKey={observationKey}
@@ -67,7 +64,7 @@ export const getEventContent = (
             mcp_tool_name: event.observation === "mcp" && event.extras.name,
           }}
           components={{
-            path: <PathComponentToUse />,
+            path: <ClickableFilePath />,
             cmd: <MonoComponent />,
           }}
         />

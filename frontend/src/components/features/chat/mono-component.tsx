@@ -2,9 +2,20 @@ import { ReactNode } from "react";
 import EventLogger from "#/utils/event-logger";
 
 const decodeHtmlEntities = (text: string): string => {
+  if (!text) return text;
+
   const textarea = document.createElement("textarea");
-  textarea.innerHTML = text;
-  return textarea.value;
+  let decoded = text;
+  let prevDecoded = "";
+
+  // Keep decoding until no more changes occur (handles double/triple encoding)
+  while (decoded !== prevDecoded) {
+    prevDecoded = decoded;
+    textarea.innerHTML = decoded;
+    decoded = textarea.value;
+  }
+
+  return decoded;
 };
 
 function MonoComponent(props: { children?: ReactNode }) {

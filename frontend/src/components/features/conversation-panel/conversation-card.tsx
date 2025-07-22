@@ -20,6 +20,8 @@ import { useWsClient } from "#/context/ws-client-provider";
 import { isSystemMessage } from "#/types/core/guards";
 import { ConversationStatus } from "#/types/conversation-status";
 import { RepositorySelection } from "#/api/open-hands.types";
+import { useVSCodeRemoteControl } from "#/hooks/use-vscode-remote-control";
+import { useConversationId } from "#/hooks/use-conversation-id";
 
 interface ConversationCardProps {
   onClick?: () => void;
@@ -58,6 +60,12 @@ export function ConversationCard({
 }: ConversationCardProps) {
   const { t } = useTranslation();
   const { parsedEvents } = useWsClient();
+  const { conversationId: activeConversationId } = useConversationId();
+
+  // Only check VSCode remote control status for the active conversation
+  const isActiveConversation = conversationId === activeConversationId;
+  const { port, isPortLoading, isPortError } = useVSCodeRemoteControl();
+
   const [contextMenuVisible, setContextMenuVisible] = React.useState(false);
   const [titleMode, setTitleMode] = React.useState<"view" | "edit">("view");
   const [metricsModalVisible, setMetricsModalVisible] = React.useState(false);
@@ -275,22 +283,48 @@ export function ConversationCard({
             />
           )}
           {(createdAt || lastUpdatedAt) && (
-            <p className="text-xs text-neutral-400">
-              <span>{t(I18nKey.CONVERSATION$CREATED)} </span>
-              <time>
-                {formatTimeDelta(new Date(createdAt || lastUpdatedAt))}{" "}
-                {t(I18nKey.CONVERSATION$AGO)}
-              </time>
-              {showUpdateTime && (
-                <>
-                  <span>{t(I18nKey.CONVERSATION$UPDATED)} </span>
-                  <time>
-                    {formatTimeDelta(new Date(lastUpdatedAt))}{" "}
-                    {t(I18nKey.CONVERSATION$AGO)}
-                  </time>
-                </>
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-neutral-400">
+                <span>{t(I18nKey.CONVERSATION$CREATED)} </span>
+                <time>
+                  {formatTimeDelta(new Date(createdAt || lastUpdatedAt))}{" "}
+                  {t(I18nKey.CONVERSATION$AGO)}
+                </time>
+                {showUpdateTime && (
+                  <>
+                    <span>{t(I18nKey.CONVERSATION$UPDATED)} </span>
+                    <time>
+                      {formatTimeDelta(new Date(lastUpdatedAt))}{" "}
+                      {t(I18nKey.CONVERSATION$AGO)}
+                    </time>
+                  </>
+                )}
+              </p>
+              {isActiveConversation && (
+                <div className="text-xs font-medium">
+                  {isPortLoading ? (
+                    <span className="text-yellow-400">Remote Control</span>
+                  ) : port && !isPortError ? (
+                    <span className="text-green-400">Remote Control</span>
+                  ) : (
+                    <span className="text-red-400">Remote Control</span>
+                  )}
+                </div>
               )}
-            </p>
+            </div>
+          )}
+          {!(createdAt || lastUpdatedAt) && isActiveConversation && (
+            <div className="flex justify-end">
+              <div className="text-xs font-medium">
+                {isPortLoading ? (
+                  <span className="text-yellow-400">Remote Control</span>
+                ) : port && !isPortError ? (
+                  <span className="text-green-400">Remote Control</span>
+                ) : (
+                  <span className="text-red-400">Remote Control</span>
+                )}
+              </div>
+            </div>
           )}
         </div>
       </div>
