@@ -44,9 +44,6 @@ enum ActionType {
 
   // Interact with the MCP server.
   MCP = "call_tool_mcp",
-
-  // Opens a file in VSCode server running in the runtime container.
-  VSCODE_OPEN_FILE = "vscode_open_file",
 }
 
 export default ActionType;

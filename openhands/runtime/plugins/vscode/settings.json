@@ -3,7 +3,6 @@
   "workbench.startupEditor": "none",
   "remoteControl.enable": true,
   "remoteControl.host": "localhost",
-  "remoteControl.port": 3710,
   "remoteControl.allowCommands": [
     "vscode.open",
     "workbench.action.files.openFile"

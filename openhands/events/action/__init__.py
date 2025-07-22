@@ -38,5 +38,4 @@ __all__ = [
     "AgentThinkAction",
     "RecallAction",
     "MCPAction",
-    "VSCodeOpenFileAction",
 ]
