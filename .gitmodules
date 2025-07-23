@@ -1,3 +1,0 @@
-[submodule "vendor/vscode-material-icons"]
-	path = vendor/vscode-material-icons
-	url = https://github.com/matejchalk/vscode-material-icons.git
