@@ -1,10 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import OpenHands from "#/api/open-hands";
-import { useConversationId } from "#/hooks/use-conversation-id";
+import { useParams } from "react-router";
 import { useRuntimeIsReady } from "#/hooks/use-runtime-is-ready";
 
 export const useVSCodeRemoteControlPort = () => {
-  const { conversationId } = useConversationId();
+  const { conversationId } = useParams<{ conversationId?: string }>();
   const runtimeIsReady = useRuntimeIsReady();
 
   return useQuery({

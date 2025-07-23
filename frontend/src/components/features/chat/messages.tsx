@@ -14,7 +14,7 @@ import { ChatMessage } from "./chat-message";
 import { useOptimisticUserMessage } from "#/hooks/use-optimistic-user-message";
 import { LaunchMicroagentModal } from "./microagent/launch-microagent-modal";
 import { useUserConversation } from "#/hooks/query/use-user-conversation";
-import { useConversationId } from "#/hooks/use-conversation-id";
+// Removed useConversationId import - will receive conversationId as prop
 import { useCreateConversationAndSubscribeMultiple } from "#/hooks/use-create-conversation-and-subscribe-multiple";
 import {
   MicroagentStatus,
@@ -27,14 +27,14 @@ import MemoryIcon from "#/icons/memory_icon.svg?react";
 interface MessagesProps {
   messages: (OpenHandsAction | OpenHandsObservation)[];
   isAwaitingUserConfirmation: boolean;
+  conversationId: string;
 }
 
 export const Messages: React.FC<MessagesProps> = React.memo(
-  ({ messages, isAwaitingUserConfirmation }) => {
+  ({ messages, isAwaitingUserConfirmation, conversationId }) => {
     const { createConversationAndSubscribe, isPending } =
       useCreateConversationAndSubscribeMultiple();
     const { getOptimisticUserMessage } = useOptimisticUserMessage();
-    const { conversationId } = useConversationId();
     const { data: conversation } = useUserConversation(conversationId);
 
     const optimisticUserMessage = getOptimisticUserMessage();

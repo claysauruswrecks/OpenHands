@@ -7,6 +7,7 @@ import { FileList } from "../files/file-list";
 import { isFileImage } from "#/utils/is-file-image";
 import { displayErrorToast } from "#/utils/custom-toast-handlers";
 import { validateFiles } from "#/utils/file-validation";
+import { FileAutocompleteState } from "#/hooks/use-file-autocomplete";
 
 interface InteractiveChatBoxProps {
   isDisabled?: boolean;
@@ -15,6 +16,11 @@ interface InteractiveChatBoxProps {
   onStop: () => void;
   value?: string;
   onChange?: (message: string) => void;
+  onFileAutocompleteStateChange?: (
+    state: FileAutocompleteState,
+    handleFileSelect: (filePath: string) => void,
+    handleClose: () => void,
+  ) => void;
 }
 
 export function InteractiveChatBox({
@@ -24,6 +30,7 @@ export function InteractiveChatBox({
   onStop,
   value,
   onChange,
+  onFileAutocompleteStateChange,
 }: InteractiveChatBoxProps) {
   const [images, setImages] = React.useState<File[]>([]);
   const [files, setFiles] = React.useState<File[]>([]);
@@ -105,6 +112,7 @@ export function InteractiveChatBox({
           onFilesPaste={handleUpload}
           className="py-[10px]"
           buttonClassName="py-[10px]"
+          onFileAutocompleteStateChange={onFileAutocompleteStateChange}
         />
       </div>
     </div>

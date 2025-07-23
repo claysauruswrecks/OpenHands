@@ -33,6 +33,8 @@ import {
 } from "#/context/expand-collapse-context";
 import { useGetTrajectory } from "#/hooks/mutation/use-get-trajectory";
 import { downloadTrajectory } from "#/utils/download-trajectory";
+import { FileAutocomplete } from "./file-autocomplete";
+import { FileAutocompleteState } from "#/hooks/use-file-autocomplete";
 import { displayErrorToast } from "#/utils/custom-toast-handlers";
 import { useOptimisticUserMessage } from "#/hooks/use-optimistic-user-message";
 import { useWSErrorMessage } from "#/hooks/use-ws-error-message";
@@ -58,6 +60,15 @@ function ChatInterfaceContent() {
   const { setOptimisticUserMessage, getOptimisticUserMessage } =
     useOptimisticUserMessage();
   const { t } = useTranslation();
+
+  // State for file autocomplete
+  const [fileAutocompleteState, setFileAutocompleteState] =
+    React.useState<FileAutocompleteState | null>(null);
+  const [fileAutocompleteHandlers, setFileAutocompleteHandlers] =
+    React.useState<{
+      handleFileSelect: (filePath: string) => void;
+      handleClose: () => void;
+    } | null>(null);
 
   // Pre-load file cache for instant autocomplete on first @ symbol
   // This ensures files are already cached when user first types "@"
@@ -131,73 +142,83 @@ function ChatInterfaceContent() {
     [parsedEvents],
   );
 
-  const handleSendMessage = async (
-    content: string,
-    originalImages: File[],
-    originalFiles: File[],
-  ) => {
-    // Create mutable copies of the arrays
-    const images = [...originalImages];
-    const files = [...originalFiles];
-    if (events.length === 0) {
-      posthog.capture("initial_query_submitted", {
-        entry_point: getEntryPoint(
-          selectedRepository !== null,
-          replayJson !== null,
-        ),
-        query_character_length: content.length,
-        replay_json_size: replayJson?.length,
-      });
-    } else {
-      posthog.capture("user_message_sent", {
-        session_message_count: events.length,
-        current_message_length: content.length,
-      });
-    }
+  const handleSendMessage = React.useCallback(
+    async (content: string, originalImages: File[], originalFiles: File[]) => {
+      // Create mutable copies of the arrays
+      const images = [...originalImages];
+      const files = [...originalFiles];
+      if (events.length === 0) {
+        posthog.capture("initial_query_submitted", {
+          entry_point: getEntryPoint(
+            selectedRepository !== null,
+            replayJson !== null,
+          ),
+          query_character_length: content.length,
+          replay_json_size: replayJson?.length,
+        });
+      } else {
+        posthog.capture("user_message_sent", {
+          session_message_count: events.length,
+          current_message_length: content.length,
+        });
+      }
 
-    // Validate file sizes before any processing
-    const allFiles = [...images, ...files];
-    const validation = validateFiles(allFiles);
+      // Validate file sizes before any processing
+      const allFiles = [...images, ...files];
+      const validation = validateFiles(allFiles);
 
-    if (!validation.isValid) {
-      displayErrorToast(`Error: ${validation.errorMessage}`);
-      return; // Stop processing if validation fails
-    }
+      if (!validation.isValid) {
+        displayErrorToast(`Error: ${validation.errorMessage}`);
+        return; // Stop processing if validation fails
+      }
 
-    const promises = images.map((image) => convertImageToBase64(image));
-    const imageUrls = await Promise.all(promises);
+      const promises = images.map((image) => convertImageToBase64(image));
+      const imageUrls = await Promise.all(promises);
 
-    const timestamp = new Date().toISOString();
+      const timestamp = new Date().toISOString();
 
-    const { skipped_files: skippedFiles, uploaded_files: uploadedFiles } =
-      files.length > 0
-        ? await uploadFiles({ conversationId: params.conversationId!, files })
-        : { skipped_files: [], uploaded_files: [] };
+      const { skipped_files: skippedFiles, uploaded_files: uploadedFiles } =
+        files.length > 0
+          ? await uploadFiles({ conversationId: params.conversationId!, files })
+          : { skipped_files: [], uploaded_files: [] };
 
-    skippedFiles.forEach((f) => displayErrorToast(f.reason));
+      skippedFiles.forEach((f) => displayErrorToast(f.reason));
 
-    const filePrompt = `${t("CHAT_INTERFACE$AUGMENTED_PROMPT_FILES_TITLE")}: ${uploadedFiles.join("\n\n")}`;
-    const prompt =
-      uploadedFiles.length > 0 ? `${content}\n\n${filePrompt}` : content;
+      const filePrompt = `${t("CHAT_INTERFACE$AUGMENTED_PROMPT_FILES_TITLE")}: ${uploadedFiles.join("\n\n")}`;
+      const prompt =
+        uploadedFiles.length > 0 ? `${content}\n\n${filePrompt}` : content;
 
-    send(createChatMessage(prompt, imageUrls, uploadedFiles, timestamp));
-    setOptimisticUserMessage(content);
-    setMessageToSend(null);
-  };
+      send(createChatMessage(prompt, imageUrls, uploadedFiles, timestamp));
+      setOptimisticUserMessage(content);
+      setMessageToSend(null);
+    },
+    [
+      events.length,
+      selectedRepository,
+      replayJson,
+      uploadFiles,
+      params.conversationId,
+      t,
+      send,
+      setOptimisticUserMessage,
+      setMessageToSend,
+    ],
+  );
 
-  const handleStop = () => {
+  const handleStop = React.useCallback(() => {
     posthog.capture("stop_button_clicked");
     send(generateAgentStateChangeEvent(AgentState.STOPPED));
-  };
+  }, [send]);
 
-  const onClickShareFeedbackActionButton = async (
-    polarity: "positive" | "negative",
-  ) => {
-    setFeedbackModalIsOpen(true);
-    setFeedbackPolarity(polarity);
-  };
+  const onClickShareFeedbackActionButton = React.useCallback(
+    async (polarity: "positive" | "negative") => {
+      setFeedbackModalIsOpen(true);
+      setFeedbackPolarity(polarity);
+    },
+    [setFeedbackModalIsOpen, setFeedbackPolarity],
+  );
 
-  const onClickExportTrajectoryButton = () => {
+  const onClickExportTrajectoryButton = React.useCallback(() => {
     if (!params.conversationId) {
       displayErrorToast(t(I18nKey.CONVERSATION$DOWNLOAD_ERROR));
       return;
@@ -214,22 +235,46 @@ function ChatInterfaceContent() {
         displayErrorToast(t(I18nKey.CONVERSATION$DOWNLOAD_ERROR));
       },
     });
-  };
+  }, [params.conversationId, getTrajectory, t]);
 
   const isWaitingForUserInput =
     curAgentState === AgentState.AWAITING_USER_INPUT ||
     curAgentState === AgentState.FINISHED;
 
-  // Create a ScrollProvider with the scroll hook values
-  const scrollProviderValue = {
-    scrollRef,
-    autoScroll,
-    setAutoScroll,
-    scrollDomToBottom,
-    hitBottom,
-    setHitBottom,
-    onChatBodyScroll,
-  };
+  // Handle file autocomplete state changes
+  const handleFileAutocompleteStateChange = React.useCallback(
+    (
+      state: FileAutocompleteState,
+      handleFileSelect: (filePath: string) => void,
+      handleClose: () => void,
+    ) => {
+      setFileAutocompleteState(state);
+      setFileAutocompleteHandlers({ handleFileSelect, handleClose });
+    },
+    [],
+  );
+
+  // Create a ScrollProvider with the scroll hook values - memoize to prevent infinite re-renders
+  const scrollProviderValue = React.useMemo(
+    () => ({
+      scrollRef,
+      autoScroll,
+      setAutoScroll,
+      scrollDomToBottom,
+      hitBottom,
+      setHitBottom,
+      onChatBodyScroll,
+    }),
+    [
+      scrollRef,
+      autoScroll,
+      setAutoScroll,
+      scrollDomToBottom,
+      hitBottom,
+      setHitBottom,
+      onChatBodyScroll,
+    ],
+  );
 
   return (
     <ScrollProvider value={scrollProviderValue}>
@@ -259,6 +304,7 @@ function ChatInterfaceContent() {
               isAwaitingUserConfirmation={
                 curAgentState === AgentState.AWAITING_USER_CONFIRMATION
               }
+              conversationId={params.conversationId!}
             />
           )}
 
@@ -311,6 +357,7 @@ function ChatInterfaceContent() {
             mode={curAgentState === AgentState.RUNNING ? "stop" : "submit"}
             value={messageToSend ?? undefined}
             onChange={setMessageToSend}
+            onFileAutocompleteStateChange={handleFileAutocompleteStateChange}
           />
         </div>
 
@@ -322,6 +369,17 @@ function ChatInterfaceContent() {
           />
         )}
       </div>
+
+      {/* File Autocomplete Dropdown - rendered outside layout constraints */}
+      {fileAutocompleteState && fileAutocompleteHandlers && (
+        <FileAutocomplete
+          isVisible={fileAutocompleteState.isVisible}
+          query={fileAutocompleteState.query}
+          position={fileAutocompleteState.position}
+          onSelect={fileAutocompleteHandlers.handleFileSelect}
+          onClose={fileAutocompleteHandlers.handleClose}
+        />
+      )}
     </ScrollProvider>
   );
 }

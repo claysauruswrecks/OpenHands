@@ -5,8 +5,10 @@ import { I18nKey } from "#/i18n/declaration";
 import { cn } from "#/utils/utils";
 import { SubmitButton } from "#/components/shared/buttons/submit-button";
 import { StopButton } from "#/components/shared/buttons/stop-button";
-import { FileAutocomplete } from "./file-autocomplete";
-import { useFileAutocomplete } from "#/hooks/use-file-autocomplete";
+import {
+  useFileAutocomplete,
+  FileAutocompleteState,
+} from "#/hooks/use-file-autocomplete";
 import { useFileCache } from "#/hooks/use-file-cache";
 
 interface ChatInputProps {
@@ -24,6 +26,11 @@ interface ChatInputProps {
   onFilesPaste?: (files: File[]) => void;
   className?: React.HTMLAttributes<HTMLDivElement>["className"];
   buttonClassName?: React.HTMLAttributes<HTMLButtonElement>["className"];
+  onFileAutocompleteStateChange?: (
+    state: FileAutocompleteState,
+    handleFileSelect: (filePath: string) => void,
+    handleClose: () => void,
+  ) => void;
 }
 
 export function ChatInput({
@@ -41,6 +48,7 @@ export function ChatInput({
   onFilesPaste,
   className,
   buttonClassName,
+  onFileAutocompleteStateChange,
 }: ChatInputProps) {
   const { t } = useTranslation();
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
@@ -49,14 +57,9 @@ export function ChatInput({
   // Get cache refresh function for focus handler
   const { refreshCache } = useFileCache();
 
-  // File autocomplete functionality
-  const {
-    autocompleteState,
-    handleFileSelect,
-    handleClose,
-    textAreaProps: autocompleteProps,
-  } = useFileAutocomplete({
-    onFileSelect: (filePath) => {
+  // Memoize the onFileSelect callback to prevent hook recreation
+  const onFileSelectCallback = React.useCallback(
+    (filePath: string) => {
       // When a file is selected, we need to update the controlled value
       // The hook will update the textarea directly, but we need to sync with the controlled component
       if (textareaRef.current) {
@@ -64,6 +67,17 @@ export function ChatInput({
         onChange?.(newValue);
       }
     },
+    [onChange],
+  );
+
+  // File autocomplete functionality
+  const {
+    autocompleteState,
+    handleFileSelect,
+    handleClose,
+    textAreaProps: autocompleteProps,
+  } = useFileAutocomplete({
+    onFileSelect: onFileSelectCallback,
   });
 
   // Enhanced focus handler that refreshes cache
@@ -171,6 +185,25 @@ export function ChatInput({
     [autocompleteProps.onBlur, onBlur],
   );
 
+  // Store the callback ref to prevent infinite re-renders
+  const onFileAutocompleteStateChangeRef = React.useRef(
+    onFileAutocompleteStateChange,
+  );
+  React.useEffect(() => {
+    onFileAutocompleteStateChangeRef.current = onFileAutocompleteStateChange;
+  }, [onFileAutocompleteStateChange]);
+
+  // Pass autocomplete state up to parent - only depend on state changes, not function changes
+  React.useEffect(() => {
+    if (onFileAutocompleteStateChangeRef.current) {
+      onFileAutocompleteStateChangeRef.current(
+        autocompleteState,
+        handleFileSelect,
+        handleClose,
+      );
+    }
+  }, [autocompleteState]); // Only depend on autocompleteState, not the functions
+
   return (
     <div
       data-testid="chat-input"
@@ -211,15 +244,6 @@ export function ChatInput({
           )}
         </div>
       )}
-
-      {/* File Autocomplete Dropdown */}
-      <FileAutocomplete
-        isVisible={autocompleteState.isVisible}
-        query={autocompleteState.query}
-        position={autocompleteState.position}
-        onSelect={handleFileSelect}
-        onClose={handleClose}
-      />
     </div>
   );
 }

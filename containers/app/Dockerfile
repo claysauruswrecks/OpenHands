@@ -1,5 +1,24 @@
 ARG OPENHANDS_BUILD_VERSION=dev
+
 FROM node:24.3.0-bookworm-slim AS frontend-builder
+
+# Re-declare ARG in this stage
+ARG INSIDE_DOCKER=1
+# Make INSIDE_DOCKER available as environment variable
+ENV INSIDE_DOCKER=${INSIDE_DOCKER}
+
+RUN apt-get update && \
+    apt-get install -y \
+    git \
+    build-essential \
+    curl \
+    wget \
+    unzip \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN curl -fsSL https://bun.com/install | bash
+
+ENV PATH="/root/.bun/bin:$PATH"
 
 WORKDIR /app
 

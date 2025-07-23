@@ -21,7 +21,7 @@ import { isSystemMessage } from "#/types/core/guards";
 import { ConversationStatus } from "#/types/conversation-status";
 import { RepositorySelection } from "#/api/open-hands.types";
 import { useVSCodeRemoteControl } from "#/hooks/use-vscode-remote-control";
-import { useConversationId } from "#/hooks/use-conversation-id";
+import { useParams } from "react-router";
 
 interface ConversationCardProps {
   onClick?: () => void;
@@ -60,7 +60,10 @@ export function ConversationCard({
 }: ConversationCardProps) {
   const { t } = useTranslation();
   const { parsedEvents } = useWsClient();
-  const { conversationId: activeConversationId } = useConversationId();
+  // Safely get the active conversation ID from route params (may be undefined if not in conversation route)
+  const { conversationId: activeConversationId } = useParams<{
+    conversationId?: string;
+  }>();
 
   // Only check VSCode remote control status for the active conversation
   const isActiveConversation = conversationId === activeConversationId;

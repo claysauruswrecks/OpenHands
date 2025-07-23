@@ -16,6 +16,28 @@ This is the frontend of the OpenHands project. It is a React application that pr
 - Vitest
 - Mock Service Worker
 
+## Material Icons
+
+OpenHands uses material icons from the VSCode Material Icon Theme. To update to the latest icons:
+
+```bash
+npm run update-icons
+```
+
+This will:
+
+1. Initialize the vscode-material-icons submodule
+2. Install dependencies
+3. Fetch the latest icons from upstream
+4. Copy icons to public assets
+
+**Requirements:**
+
+- **git**: Required for submodule management
+- **bun**: Required for fetching latest icons from upstream ([Install bun](https://bun.sh))
+
+The system will fail if these requirements are not met to ensure consistent icon updates.
+
 ## Getting Started
 
 ### Prerequisites
@@ -61,6 +83,7 @@ make build
 # Start the application
 make run
 ```
+
 Or to run backend and frontend separately.
 
 ```sh
@@ -73,6 +96,7 @@ cd frontend && npm start -- --port 3001
 ```
 
 Start frontend with Mock Service Worker (MSW), see testing for more info.
+
 ```sh
 npm run dev:mock or npm run dev:mock:saas
 ```
@@ -141,6 +165,7 @@ components
 ### Testing Framework and Tools
 
 We use the following testing tools:
+
 - **Test Runner**: Vitest
 - **Rendering**: React Testing Library
 - **User Interactions**: @testing-library/user-event
@@ -150,11 +175,13 @@ We use the following testing tools:
 ### Running Tests
 
 To run all tests:
+
 ```sh
 npm run test
 ```
 
 To run tests with coverage:
+
 ```sh
 npm run test:coverage
 ```
@@ -176,7 +203,7 @@ npm run test:coverage
 3. **Mocking**
    - We test components that make network requests by mocking those requests with Mock Service Worker (MSW)
    - Use `vi.fn()` to create mock functions for callbacks and event handlers
-   - Mock external dependencies and API calls (more info)[https://mswjs.io/docs/getting-started]
+   - Mock external dependencies and API calls [more info](https://mswjs.io/docs/getting-started)
    - Verify mock function calls using `.toHaveBeenCalledWith()`, `.toHaveBeenCalledTimes()`
 
 4. **Accessibility Testing**
@@ -194,6 +221,7 @@ npm run test:coverage
    - Verify text rendering across different languages
 
 Example Test Structure:
+
 ```typescript
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -241,6 +269,7 @@ For real-world examples of testing, check out these test files:
 ### Continuous Integration
 
 Tests are automatically run during:
+
 - Pre-commit hooks
 - Pull request checks
 - CI/CD pipeline

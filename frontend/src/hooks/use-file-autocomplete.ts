@@ -23,17 +23,52 @@ export function useFileAutocomplete({
     });
 
   const textAreaRef = useRef<HTMLTextAreaElement | null>(null);
+  // Store the current autocomplete state in a ref for stable access
+  const autocompleteStateRef = useRef(autocompleteState);
+
+  // Update ref whenever state changes
+  useEffect(() => {
+    autocompleteStateRef.current = autocompleteState;
+  }, [autocompleteState]);
 
   // Calculate position for the dropdown - VSCode style at top center of chat area
   const calculatePosition = useCallback(() => {
-    // Find the chat messages container (scrollable area)
-    const chatContainer =
-      document.querySelector('[data-testid="chat-messages-container"]') ||
-      document.querySelector(".scrollbar.scrollbar-thin") || // fallback to scrollbar class
-      document.querySelector(".overflow-y-auto"); // last fallback
+    // Find the main chat messages container - need to be more specific to avoid small elements
+    const chatContainers = document.querySelectorAll(
+      '[data-testid="chat-messages-container"]',
+    );
+
+    let chatContainer: Element | null = null;
+
+    // If multiple containers, find the one that's actually the main scrollable area
+    if (chatContainers.length > 1) {
+      for (const container of chatContainers) {
+        const rect = container.getBoundingClientRect();
+        // Main chat container should be reasonably large (height > 100px)
+        if (rect.height > 100) {
+          chatContainer = container;
+          break;
+        }
+      }
+    } else if (chatContainers.length === 1) {
+      chatContainer = chatContainers[0];
+    }
+
+    // Fallback selectors if no good chat container found
+    if (!chatContainer) {
+      chatContainer =
+        document.querySelector(
+          ".scrollbar.scrollbar-thin.flex.flex-col.grow.overflow-y-auto",
+        ) ||
+        document.querySelector(".overflow-y-auto.flex.flex-col.grow") ||
+        document.querySelector(".overflow-y-auto");
+    }
 
     if (!chatContainer) {
       // Fallback to viewport center top if no chat container found
+      console.log(
+        "FileAutocomplete: No chat container found, using fallback position",
+      );
       return {
         top: 100,
         left: window.innerWidth / 2 - 200, // 200 = half of dropdown width (400px)
@@ -41,12 +76,40 @@ export function useFileAutocomplete({
     }
 
     const containerRect = chatContainer.getBoundingClientRect();
+    console.log("FileAutocomplete: Container rect:", containerRect);
 
-    // Position at top center of the chat messages area
-    return {
-      top: containerRect.top + 20, // 20px from top of chat area
+    // Check if we're in an empty chat by looking for chat suggestions
+    const chatSuggestions = document.querySelector(
+      '[data-testid="chat-suggestions"]',
+    );
+
+    if (chatSuggestions) {
+      // Use chat suggestions container for positioning when no messages exist
+      const suggestionsRect = chatSuggestions.getBoundingClientRect();
+      const position = {
+        top: suggestionsRect.top + 60, // Position near top of suggestions area
+        left: suggestionsRect.left + suggestionsRect.width / 2 - 200, // Center horizontally
+      };
+      console.log(
+        "FileAutocomplete: Empty chat with suggestions, using suggestions position:",
+        position,
+      );
+      return position;
+    }
+
+    // Position at top center of the chat messages area when there are messages
+    // Ensure we're positioning relative to viewport, not the container's scroll position
+    const viewportTop = Math.max(containerRect.top, 60); // Don't go above 60px from top of viewport
+    const position = {
+      top: viewportTop + 20, // 20px from visible top of chat area
       left: containerRect.left + containerRect.width / 2 - 200, // Center horizontally (200 = half of 400px width)
     };
+
+    console.log(
+      "FileAutocomplete: Chat with messages, using top position:",
+      position,
+    );
+    return position;
   }, []);
 
   // Handle text input changes
@@ -95,17 +158,24 @@ export function useFileAutocomplete({
     [calculatePosition],
   );
 
-  // Handle file selection
+  // Handle file selection - use ref for stable function
   const handleFileSelect = useCallback(
     (filePath: string) => {
-      if (!textAreaRef.current || autocompleteState.triggerIndex === -1) return;
+      if (
+        !textAreaRef.current ||
+        autocompleteStateRef.current.triggerIndex === -1
+      )
+        return;
 
       const textArea = textAreaRef.current;
       const value = textArea.value;
       const caretPosition = textArea.selectionStart || 0;
 
       // Find the end of the current query
-      const beforeAt = value.substring(0, autocompleteState.triggerIndex);
+      const beforeAt = value.substring(
+        0,
+        autocompleteStateRef.current.triggerIndex,
+      );
       const afterCaret = value.substring(caretPosition);
 
       // Replace @query with @filePath
@@ -126,7 +196,7 @@ export function useFileAutocomplete({
       const event = new Event("input", { bubbles: true });
       textArea.dispatchEvent(event);
     },
-    [autocompleteState.triggerIndex, onFileSelect],
+    [onFileSelect], // Removed autocompleteState.triggerIndex dependency
   );
 
   // Handle closing autocomplete
