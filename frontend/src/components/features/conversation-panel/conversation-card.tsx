@@ -67,7 +67,9 @@ export function ConversationCard({
 
   // Only check VSCode remote control status for the active conversation
   const isActiveConversation = conversationId === activeConversationId;
-  const { port, isPortLoading, isPortError } = useVSCodeRemoteControl();
+  const { port, isPortLoading, isPortError } = useVSCodeRemoteControl(
+    isActiveConversation ? conversationId : undefined,
+  );
 
   const [contextMenuVisible, setContextMenuVisible] = React.useState(false);
   const [titleMode, setTitleMode] = React.useState<"view" | "edit">("view");

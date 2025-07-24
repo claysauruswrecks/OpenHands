@@ -26,14 +26,36 @@ class VSCodeRemoteControlService {
   }
 
   /**
-   * Opens a file in VSCode
+   * Opens a file in VSCode with proper tab management
+   * VSCode automatically focuses existing tabs when the same file is opened again
    * @param filePath - The path to the file to open
    * @param port - Optional port to use (overrides default/config port)
    */
   async openFile(filePath: string, port?: number): Promise<void> {
+    // Use vscode.openWith for better control over how files are opened
+    // This ensures files open in new tabs or focus existing ones properly
+    // VSCode's built-in behavior automatically focuses existing tabs for the same file
     return this.sendCommand(
       {
         command: "vscode.open",
+        args: [filePath, { preview: false }], // preview: false ensures files open in proper tabs, not preview mode
+      },
+      port,
+    );
+  }
+
+  /**
+   * Opens a file using VSCode's file opening command (alternative method)
+   * This explicitly uses the workbench command for opening files
+   * @param filePath - The path to the file to open
+   * @param port - Optional port to use (overrides default/config port)
+   */
+  async openFileWithWorkbench(filePath: string, port?: number): Promise<void> {
+    // Alternative approach using workbench command
+    // This may provide different behavior for tab management
+    return this.sendCommand(
+      {
+        command: "workbench.action.files.openFile",
         args: [filePath],
       },
       port,
@@ -135,7 +157,7 @@ class VSCodeRemoteControlService {
   }
 
   /**
-   * Opens a file at a specific line and column
+   * Opens a file at a specific line and column with proper tab management
    * @param filePath - The path to the file to open
    * @param line - Optional line number (1-based)
    * @param column - Optional column number (1-based)
@@ -148,20 +170,101 @@ class VSCodeRemoteControlService {
     port?: number,
   ): Promise<void> {
     if (line !== undefined) {
-      // Use VSCode's URI format for opening at specific position
+      // Use VSCode's URI format for opening at specific position with proper tab behavior
       const uri = `file://${filePath}`;
       const position = column !== undefined ? `${line}:${column}` : `${line}`;
 
       return this.sendCommand(
         {
           command: "vscode.open",
-          args: [`${uri}#${position}`],
+          args: [`${uri}#${position}`, { preview: false }], // Ensure it opens in a proper tab
         },
         port,
       );
     }
 
     return this.openFile(filePath, port);
+  }
+
+  /**
+   * Opens a directory in the Explorer view
+   * @param dirPath - The path to the directory to reveal
+   * @param port - Optional port to use (overrides default/config port)
+   */
+  async openDirectory(dirPath: string, port?: number): Promise<void> {
+    // Focus the Explorer view to show the directory structure
+    await this.sendCommand(
+      {
+        command: "workbench.view.explorer",
+      },
+      port,
+    );
+
+    // For directories, we don't try to open them as files since that causes an error
+    // VSCode doesn't have a direct API to navigate to a specific directory in the explorer
+    // The explorer focus is the best we can do for directory navigation
+    console.debug(`Focused Explorer view for directory: ${dirPath}`);
+  }
+
+  /**
+   * Focuses the Explorer view (useful for directory browsing)
+   * @param port - Optional port to use (overrides default/config port)
+   */
+  async focusExplorer(port?: number): Promise<void> {
+    return this.sendCommand(
+      {
+        command: "workbench.view.explorer",
+      },
+      port,
+    );
+  }
+
+  /**
+   * Reveals a file or directory in the Explorer view
+   * @param path - The path to reveal in the Explorer
+   * @param port - Optional port to use (overrides default/config port)
+   */
+  async revealInExplorer(path: string, port?: number): Promise<void> {
+    let finalPath = path;
+    if (!finalPath.startsWith("/")) {
+      finalPath = `/workspace/${finalPath}`;
+    }
+
+    // First ensure Explorer is visible
+    await this.focusExplorer(port);
+
+    // For files, try to open them which will also reveal them in explorer
+    // For directories, just focus the explorer (don't try to open as file)
+    if (this.isLikelyFile(path)) {
+      return this.sendCommand(
+        {
+          command: "vscode.open",
+          args: [finalPath],
+        },
+        port,
+      );
+    }
+
+    // For directories, we've already focused the explorer above
+    // VSCode doesn't have a direct API to reveal arbitrary directories
+    // So we just ensure the explorer is focused
+  }
+
+  /**
+   * Helper method to determine if a path is likely a file
+   * @param path - The path to check
+   */
+  private isLikelyFile(path: string): boolean {
+    // Directories typically end with / or have no file extension
+    if (path.endsWith("/")) return false;
+
+    // Check if it has a file extension (contains a dot after the last slash)
+    const lastSlashIndex = path.lastIndexOf("/");
+    const pathPart =
+      lastSlashIndex >= 0 ? path.substring(lastSlashIndex + 1) : path;
+
+    // Consider it a file if it has a dot (extension)
+    return pathPart.includes(".");
   }
 }
 

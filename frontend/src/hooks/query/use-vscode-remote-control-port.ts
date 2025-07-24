@@ -3,9 +3,14 @@ import OpenHands from "#/api/open-hands";
 import { useParams } from "react-router";
 import { useRuntimeIsReady } from "#/hooks/use-runtime-is-ready";
 
-export const useVSCodeRemoteControlPort = () => {
-  const { conversationId } = useParams<{ conversationId?: string }>();
+export const useVSCodeRemoteControlPort = (targetConversationId?: string) => {
+  const { conversationId: routeConversationId } = useParams<{
+    conversationId?: string;
+  }>();
   const runtimeIsReady = useRuntimeIsReady();
+
+  // Use the provided conversationId or fall back to the route's conversationId
+  const conversationId = targetConversationId || routeConversationId;
 
   return useQuery({
     queryKey: ["vscode-remote-control-port", conversationId],

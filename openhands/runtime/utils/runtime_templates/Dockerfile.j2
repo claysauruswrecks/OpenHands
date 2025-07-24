@@ -227,7 +227,7 @@ RUN mkdir -p /tmp/vscode-remote-control && \
     unzip -q /tmp/vscode-remote-control/*.vsix && \
     mv extension eliostruyf.vscode-remote-control-1.8.0 && \
     rm -rf /tmp/vscode-remote-control && \
-    chown -R openhands:openhands ${OPENVSCODE_SERVER_ROOT}
+    chown -R 1000:1000 ${OPENVSCODE_SERVER_ROOT}  # TODO: Fix this later
 
 
 

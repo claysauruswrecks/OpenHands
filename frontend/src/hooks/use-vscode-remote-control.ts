@@ -14,7 +14,11 @@ interface UseVSCodeRemoteControlReturn extends UseVSCodeRemoteControlState {
     line?: number,
     column?: number,
   ) => Promise<void>;
+  openFileWithWorkbench: (filePath: string) => Promise<void>;
   executeCommand: (commandId: string, ...args: unknown[]) => Promise<void>;
+  openDirectory: (dirPath: string) => Promise<void>;
+  focusExplorer: () => Promise<void>;
+  revealInExplorer: (path: string) => Promise<void>;
   clearError: () => void;
   port: number | null;
   isPortLoading: boolean;
@@ -26,7 +30,9 @@ interface UseVSCodeRemoteControlReturn extends UseVSCodeRemoteControlState {
  * Provides convenient methods for opening files and executing commands in VSCode
  * via the vscode-remote-control extension with dynamic port discovery
  */
-export function useVSCodeRemoteControl(): UseVSCodeRemoteControlReturn {
+export function useVSCodeRemoteControl(
+  conversationId?: string,
+): UseVSCodeRemoteControlReturn {
   const [state, setState] = useState<UseVSCodeRemoteControlState>({
     isConnecting: false,
     lastError: null,
@@ -37,7 +43,7 @@ export function useVSCodeRemoteControl(): UseVSCodeRemoteControlReturn {
     data: portData,
     isLoading: isPortLoading,
     error: portError,
-  } = useVSCodeRemoteControlPort();
+  } = useVSCodeRemoteControlPort(conversationId);
   const port = portData?.vscode_remote_control_port || null;
 
   const setConnecting = useCallback((connecting: boolean) => {
@@ -113,6 +119,36 @@ export function useVSCodeRemoteControl(): UseVSCodeRemoteControlReturn {
     [setConnecting, setError, port, portError],
   );
 
+  const openFileWithWorkbench = useCallback(
+    async (filePath: string) => {
+      try {
+        setConnecting(true);
+        setError(null);
+
+        if (!port) {
+          const errorMsg = portError
+            ? `Failed to get VSCode remote control port: ${portError}`
+            : "VSCode remote control port not available";
+          console.warn(errorMsg);
+          throw new Error(errorMsg);
+        }
+
+        console.debug(
+          `Opening file with workbench command on port ${port}:`,
+          filePath,
+        );
+        await vscodeRemoteControl.openFileWithWorkbench(filePath, port);
+      } catch (error) {
+        const err = error instanceof Error ? error : new Error(String(error));
+        setError(err);
+        throw err;
+      } finally {
+        setConnecting(false);
+      }
+    },
+    [port, portError],
+  );
+
   const executeCommand = useCallback(
     async (commandId: string, ...args: unknown[]) => {
       try {
@@ -144,11 +180,95 @@ export function useVSCodeRemoteControl(): UseVSCodeRemoteControlReturn {
     [setConnecting, setError, port, portError],
   );
 
+  const openDirectory = useCallback(
+    async (dirPath: string) => {
+      try {
+        setConnecting(true);
+        setError(null);
+
+        if (!port) {
+          const errorMsg = portError
+            ? `Failed to get VSCode remote control port: ${portError}`
+            : "VSCode remote control port not available";
+          console.warn(errorMsg);
+          throw new Error(errorMsg);
+        }
+
+        console.debug(
+          `Opening directory in VSCode on port ${port}: ${dirPath}`,
+        );
+        await vscodeRemoteControl.openDirectory(dirPath, port);
+      } catch (error) {
+        const err = error instanceof Error ? error : new Error(String(error));
+        setError(err);
+        throw err;
+      } finally {
+        setConnecting(false);
+      }
+    },
+    [setConnecting, setError, port, portError],
+  );
+
+  const focusExplorer = useCallback(async () => {
+    try {
+      setConnecting(true);
+      setError(null);
+
+      if (!port) {
+        const errorMsg = portError
+          ? `Failed to get VSCode remote control port: ${portError}`
+          : "VSCode remote control port not available";
+        console.warn(errorMsg);
+        throw new Error(errorMsg);
+      }
+
+      console.debug(`Focusing Explorer view on port ${port}`);
+      await vscodeRemoteControl.focusExplorer(port);
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      setError(err);
+      throw err;
+    } finally {
+      setConnecting(false);
+    }
+  }, [setConnecting, setError, port, portError]);
+
+  const revealInExplorer = useCallback(
+    async (path: string) => {
+      try {
+        setConnecting(true);
+        setError(null);
+
+        if (!port) {
+          const errorMsg = portError
+            ? `Failed to get VSCode remote control port: ${portError}`
+            : "VSCode remote control port not available";
+          console.warn(errorMsg);
+          throw new Error(errorMsg);
+        }
+
+        console.debug(`Revealing path in Explorer on port ${port}: ${path}`);
+        await vscodeRemoteControl.revealInExplorer(path, port);
+      } catch (error) {
+        const err = error instanceof Error ? error : new Error(String(error));
+        setError(err);
+        throw err;
+      } finally {
+        setConnecting(false);
+      }
+    },
+    [setConnecting, setError, port, portError],
+  );
+
   return {
     ...state,
     openFile,
     openFileAtPosition,
+    openFileWithWorkbench,
     executeCommand,
+    openDirectory,
+    focusExplorer,
+    revealInExplorer,
     clearError,
     port,
     isPortLoading,

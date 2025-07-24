@@ -4,6 +4,7 @@ import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 import ArrowDown from "#/icons/angle-down-solid.svg?react";
 import ArrowUp from "#/icons/angle-up-solid.svg?react";
+import { ClickableFilePath } from "./clickable-file-path";
 
 interface DiffWithSyntaxProps {
   diff: string;
@@ -64,7 +65,8 @@ export function DiffWithSyntax({ diff }: DiffWithSyntaxProps) {
 
   // Extract file path and detect language
   const filePathMatch = diff.match(/(?:---|\+\+\+)\s+([^\s]+)/);
-  const language = filePathMatch ? getLanguageFromPath(filePathMatch[1]) : "";
+  const filePath = filePathMatch ? filePathMatch[1] : null;
+  const language = filePath ? getLanguageFromPath(filePath) : "";
 
   const getMiniView = () => {
     if (!needsMinification) return lines;
@@ -214,6 +216,14 @@ export function DiffWithSyntax({ diff }: DiffWithSyntaxProps) {
 
   return (
     <div style={{ position: "relative" }}>
+      {/* Clickable file path header */}
+      {filePath && (
+        <div className="mb-2 flex items-center gap-2 text-sm">
+          <span className="text-neutral-400">File:</span>
+          <ClickableFilePath>{filePath}</ClickableFilePath>
+        </div>
+      )}
+
       {needsMinification && (
         <button
           type="button"
